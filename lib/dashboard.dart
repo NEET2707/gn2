@@ -20,11 +20,9 @@ class Dashboard extends StatefulWidget {
 
 
 class _DashboardState extends State<Dashboard> {
-  List<Map<String, dynamic>> _transactions = [];
   var currentPage = DrawerSection.dashboard; // Define currentPage here
   final TextEditingController _nameController = TextEditingController();
   List<Map<String, dynamic>> namesList = []; // List to store both name and id
-  final TextEditingController _searchController = TextEditingController(); // Controller for search
   List<Map<String, dynamic>> filteredNamesList = []; // List for filtered names
   final dbHelper = AppDatabaseHelper();
 
@@ -48,42 +46,6 @@ class _DashboardState extends State<Dashboard> {
       });
     }
   }
-
-
-  // Method to save a transaction
-  Future<void> _saveTransaction() async {
-    String date = _dateController.text;
-    String type = _transactionType!;
-    double amount = double.parse(_amountController.text);
-    String particular = _particularController.text;
-
-    final transaction = {
-      'date': date,
-      'type': type,
-      'amount': amount,
-      'particular': particular,
-    };
-
-    print('Saving transaction: $transaction'); // Log the transaction data
-
-    await AppDatabaseHelper().insertTransaction(transaction);  // Use singleton to insert transaction
-    await _fetchData(); // Refresh the data after saving
-
-    print('Transaction saved!');
-  }
-
-  // Method to fetch all transactions
-  Future<void> _fetchData() async {
-    final transactions = await AppDatabaseHelper().getAllTransactions();
-    print('Fetched transactions: $transactions'); // Log fetched data
-
-    setState(() {
-      _transactions = transactions;  // Update _transactions to reflect fetched data
-    });
-  }
-
-
-
 
 
   @override
@@ -111,20 +73,6 @@ class _DashboardState extends State<Dashboard> {
     setState(() {});
   }
 
-
-  _filterNames() {
-    String searchQuery = _searchController.text.toLowerCase();
-    setState(() {
-      filteredNamesList = namesList
-          .where((nameData) =>
-          nameData['name'].toLowerCase().contains(searchQuery))
-          .toList();
-    });
-  }
-
-
-  // Save name to the database
-  // Save name to the database, ensuring no duplicates
   _saveName() async {
     if (_nameController.text.isNotEmpty) {
       // Check if the name already exists in the namesList
@@ -342,8 +290,6 @@ class _DashboardState extends State<Dashboard> {
       );
     }
   }
-
-
 
 
 
@@ -1014,32 +960,6 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 }
-
-
-
-Widget _buildInfoBox(String title, String value) {
-  return Container(
-    height: 90,
-    width: 90,
-    color: Color(0xFF5C9EAD),
-    alignment: Alignment.center,
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Text(
-          title,
-          style: TextStyle(fontSize: 14, color: Colors.white),
-        ),
-        SizedBox(height: 5),
-        Text(
-          value,
-          style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-      ],
-    ),
-  );
-}
-
 
 // Enum for Drawer Section
 enum DrawerSection {

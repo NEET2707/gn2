@@ -152,16 +152,110 @@ class _CreditPageState extends State<CreditPage> {
   }
 
 
+  // void _showSearchDialog() {
+  //   showDialog(
+  //     context: context,
+  //     builder: (context) {
+  //       return StatefulBuilder(
+  //         builder: (context, setState) {
+  //           return Dialog(
+  //             shape: RoundedRectangleBorder(
+  //               borderRadius: BorderRadius.circular(12.0),
+  //             ),
+  //             child: Padding(
+  //               padding: const EdgeInsets.all(16.0),
+  //               child: Column(
+  //                 mainAxisSize: MainAxisSize.min,
+  //                 children: [
+  //                   // Start Date Input
+  //                   InkWell(
+  //                     child: TextField(
+  //                       controller: _startDateController,
+  //                       decoration: InputDecoration(
+  //                         labelText: 'Start Date',
+  //                         border: OutlineInputBorder(),
+  //                         suffixIcon: Icon(Icons.calendar_today),
+  //                       ),
+  //                       onTap: () async {
+  //                         // Show date picker to select start date
+  //                         await _selectStartDate(context);
+  //                         setState(() {}); // Refresh state after selecting the start date
+  //                       },
+  //                       keyboardType: TextInputType.datetime, // Allow typing of date
+  //                     ),
+  //                   ),
+  //                   SizedBox(height: 16),
+  //
+  //                   // End Date Input
+  //                   InkWell(
+  //                     child: TextField(
+  //                       controller: _endDateController,
+  //                       decoration: InputDecoration(
+  //                         labelText: 'End Date',
+  //                         border: OutlineInputBorder(),
+  //                         suffixIcon: Icon(Icons.calendar_today),
+  //                       ),
+  //                       onTap: () async {
+  //                         // Show date picker to select end date
+  //                         await _selectEndDate(context);
+  //                         setState(() {}); // Refresh state after selecting the end date
+  //                       },
+  //                       keyboardType: TextInputType.datetime, // Allow typing of date
+  //                     ),
+  //                   ),
+  //                   SizedBox(height: 16),
+  //
+  //                   // Search Button
+  //                   ElevatedButton(
+  //                     onPressed: () async {
+  //                       // Ensure that both start and end dates are selected or entered
+  //                       if (_startDateController.text.isNotEmpty &&
+  //                           _endDateController.text.isNotEmpty) {
+  //                         // Fetch transactions between the selected or entered dates
+  //                         List<Map<String, dynamic>> transactions =
+  //                         await _searchTransactionsBetweenDates(
+  //                             _startDateController.text,
+  //                             _endDateController.text);
+  //
+  //                         // Calculate total credit, debit, and balance for the filtered transactions
+  //                         double totalCredit = _calculateTotalCredit(transactions);
+  //                         double totalDebit = _calculateTotalDebit(transactions);
+  //                         double balance = _calculateBalance(totalCredit, totalDebit);
+  //
+  //                         // Display the results in a new page or alert
+  //                         Navigator.push(
+  //                           context,
+  //                           MaterialPageRoute(
+  //                             builder: (context) => SearchResultPage(
+  //                               totalCredit: totalCredit,
+  //                               totalDebit: totalDebit,
+  //                               balance: balance,
+  //                               transactions: transactions,
+  //                             ),
+  //                           ),
+  //                         );
+  //                       } else {
+  //                         ScaffoldMessenger.of(context).showSnackBar(
+  //                           SnackBar(
+  //                             content: Text(
+  //                                 'Please select both start and end dates.'),
+  //                           ),
+  //                         );
+  //                       }
+  //                     },
+  //                     child: Text('Search'),
+  //                   ),
+  //                 ],
+  //               ),
+  //             ),
+  //           );
+  //         },
+  //       );
+  //     },
+  //   );
+  // }
 
-
-  // Calculate total credit
-
-
-  Future<List<Map<String, dynamic>>> _searchTransactionsBetweenDates(String startDate, String endDate) async {
-    return await AppDatabaseHelper().getTransactionsBetweenDates(widget.name, startDate, endDate);
-  }
-
-  // Show search dialog
+  List<Map<String, dynamic>> _filteredTransactions = [];
   void _showSearchDialog() {
     showDialog(
       context: context,
@@ -187,11 +281,10 @@ class _CreditPageState extends State<CreditPage> {
                           suffixIcon: Icon(Icons.calendar_today),
                         ),
                         onTap: () async {
-                          // Show date picker to select start date
                           await _selectStartDate(context);
-                          setState(() {}); // Refresh state after selecting the start date
+                          setState(() {});
                         },
-                        keyboardType: TextInputType.datetime, // Allow typing of date
+                        readOnly: true,
                       ),
                     ),
                     SizedBox(height: 16),
@@ -206,11 +299,10 @@ class _CreditPageState extends State<CreditPage> {
                           suffixIcon: Icon(Icons.calendar_today),
                         ),
                         onTap: () async {
-                          // Show date picker to select end date
                           await _selectEndDate(context);
-                          setState(() {}); // Refresh state after selecting the end date
+                          setState(() {});
                         },
-                        keyboardType: TextInputType.datetime, // Allow typing of date
+                        readOnly: true,
                       ),
                     ),
                     SizedBox(height: 16),
@@ -218,40 +310,7 @@ class _CreditPageState extends State<CreditPage> {
                     // Search Button
                     ElevatedButton(
                       onPressed: () async {
-                        // Ensure that both start and end dates are selected or entered
-                        if (_startDateController.text.isNotEmpty &&
-                            _endDateController.text.isNotEmpty) {
-                          // Fetch transactions between the selected or entered dates
-                          List<Map<String, dynamic>> transactions =
-                          await _searchTransactionsBetweenDates(
-                              _startDateController.text,
-                              _endDateController.text);
-
-                          // Calculate total credit, debit, and balance for the filtered transactions
-                          double totalCredit = _calculateTotalCredit(transactions);
-                          double totalDebit = _calculateTotalDebit(transactions);
-                          double balance = _calculateBalance(totalCredit, totalDebit);
-
-                          // Display the results in a new page or alert
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => SearchResultPage(
-                                totalCredit: totalCredit,
-                                totalDebit: totalDebit,
-                                balance: balance,
-                                transactions: transactions,
-                              ),
-                            ),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Please select both start and end dates.'),
-                            ),
-                          );
-                        }
+                        searchDateVise();
                       },
                       child: Text('Search'),
                     ),
@@ -265,12 +324,40 @@ class _CreditPageState extends State<CreditPage> {
     );
   }
 
+  void searchDateVise() async {
+    if (_startDateController.text.isNotEmpty &&
+        _endDateController.text.isNotEmpty) {
+      // Fetch transactions
+      List<Map<String, dynamic>> transactions =
+          await _fetchTransactions();
+
+      // Filter transactions between selected dates
+      DateTime startDate =
+      DateTime.parse(_startDateController.text);
+      DateTime endDate =
+      DateTime.parse(_endDateController.text);
+
+      setState(() {
+        _filteredTransactions = transactions.where((tx) {
+          DateTime txDate = DateTime.parse(tx['date']);
+          return txDate.isAfter(startDate) &&
+              txDate.isBefore(endDate.add(Duration(days: 1)));
+        }).toList();
+      });
+      Navigator.pop(context); // Close the dialog
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please select both start and end dates.'),
+        ),
+      );
+    }
+  }
 
   void _saveAsPdf() {
     print("Saving as PDF...");
     // Add logic to generate and save the PDF
   }
-
 
   Future<void> requestStoragePermissions() async {
     if (Platform.isAndroid) {
@@ -443,12 +530,6 @@ class _CreditPageState extends State<CreditPage> {
       );
     }
   }
-
-
-
-
-
-
 
 
   @override
@@ -695,128 +776,137 @@ class _CreditPageState extends State<CreditPage> {
                   return Column(
                     children: [
 
-                  Expanded(
-                  child: ListView.builder(
-                  itemCount: transactions.length,
-                    itemBuilder: (context, index) {
-                      var transaction = transactions[index];
-                      return Container(
-                        color: index % 2 == 0
-                            ? Colors.white
-                            : Colors.grey[200], // Alternate row colors
-                        child: Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                  child: Text('${transaction['date']}')),
-                              Expanded(
-                                  child: Text(
-                                      '${transaction['particular']}')),
-                              Expanded(
-                                  child: Text(
-                                    transaction['type'] == 'credit'
-                                        ? '\$${transaction['amount']}'
-                                        : '0.00',
-                                    style: TextStyle(color: Colors.green),
-                                  )),
-                              Expanded(
-                                  child: Text(
-                                    transaction['type'] == 'debit'
-                                        ? '\$${transaction['amount']}'
-                                        : '0.00',
-                                    style: TextStyle(color: Colors.red),
-                                  )),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                      Container(
-                        // height: 150,
-                        width: double.infinity,
-                        color: Colors.white,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
+                      Expanded(
+                        child: FutureBuilder<List<Map<String, dynamic>>>(
+                          future: _fetchTransactions(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return Center(child: CircularProgressIndicator());
+                            } else if (snapshot.hasError) {
+                              return Center(child: Text('Error: ${snapshot.error}'));
+                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                              return Center(child: Text('No transactions available.'));
+                            } else {
+                              // Display filtered transactions if available
+                              var transactions = _filteredTransactions.isEmpty
+                                  ? snapshot.data!
+                                  : _filteredTransactions;
+
+                              double totalCredit = _calculateTotalCredit(transactions);
+                              double totalDebit = _calculateTotalDebit(transactions);
+                              double balance = _calculateBalance(totalCredit, totalDebit);
+
+                              return Column(
                                 children: [
-                                  Text(
-                                    'Total Credit',
-                                    style: TextStyle(
-                                        color: Colors.green,
-                                        backgroundColor: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  ),Text(
-                                    '${totalCredit.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                        color: Colors.green,
-                                        backgroundColor: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Column(
-                                children: [
-                                  Text(
-                                    'Total Debit:',
-                                    style: TextStyle(
-                                        color: Colors.red,
-                                        backgroundColor: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  ),
-                                  Text(
-                                    '${totalDebit.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                        color: Colors.red,
-                                        backgroundColor: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Container(
-                              color: Color(0xFF5C9EAD),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Column(
-                                  children: [
-                                    Text(
-                                      'Total Balance:',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
-                                    ),Text(
-                                      ' ${balance.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16),
+                                  Expanded(
+                                    child: ListView.builder(
+                                      itemCount: transactions.length,
+                                      itemBuilder: (context, index) {
+                                        var transaction = transactions[index];
+                                        return Container(
+                                          color: index % 2 == 0
+                                              ? Colors.white
+                                              : Colors.grey[200],
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Expanded(child: Text('${transaction['date']}')),
+                                                Expanded(child: Text('${transaction['particular']}')),
+                                                Expanded(
+                                                  child: Text(
+                                                    transaction['type'] == 'credit'
+                                                        ? '\$${transaction['amount']}'
+                                                        : '0.00',
+                                                    style: TextStyle(color: Colors.green),
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: Text(
+                                                    transaction['type'] == 'debit'
+                                                        ? '\$${transaction['amount']}'
+                                                        : '0.00',
+                                                    style: TextStyle(color: Colors.red),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  ],
-                                ),
-                              ),
-                            )
-
-                          ],
+                                  ),
+                                  Container(
+                                    width: double.infinity,
+                                    color: Colors.white,
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        // Display totals
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Column(
+                                            children: [
+                                              Text('Total Credit',
+                                                  style: TextStyle(
+                                                      color: Colors.green,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16)),
+                                              Text('${totalCredit.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                      color: Colors.green,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16)),
+                                            ],
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Column(
+                                            children: [
+                                              Text('Total Debit',
+                                                  style: TextStyle(
+                                                      color: Colors.red,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16)),
+                                              Text('${totalDebit.toStringAsFixed(2)}',
+                                                  style: TextStyle(
+                                                      color: Colors.red,
+                                                      fontWeight: FontWeight.bold,
+                                                      fontSize: 16)),
+                                            ],
+                                          ),
+                                        ),
+                                        Container(
+                                          color: Color(0xFF5C9EAD),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Column(
+                                              children: [
+                                                Text('Balance',
+                                                    style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 16)),
+                                                Text('${balance.toStringAsFixed(2)}',
+                                                    style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight: FontWeight.bold,
+                                                        fontSize: 16)),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }
+                          },
                         ),
-                      )
-                      // Totals Display at Bottom
-
+                      ),
                     ],
                   );
                 }
