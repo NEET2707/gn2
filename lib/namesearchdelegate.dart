@@ -37,61 +37,66 @@ class _SearchPageState extends State<SearchPage> {
     });
   }
 
+  // Clear the search field
+  _clearSearch() {
+    _searchController.clear();
+    _loadNames(); // Reload the original data
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFECF0F1),
+      backgroundColor: Color(0xFFF8F9FA), // Light background color
       appBar: AppBar(
         iconTheme: IconThemeData(color: Color(0xFFECECEC)),
-        title: Text('Search Records', style: TextStyle(color: Colors.white),),
-        backgroundColor: Color(0xFF5C9EAD),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: _filterNames, // Trigger search
+        backgroundColor: Color(0xFF4E8B88), // Soft green color for app bar
+        title: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: TextField(
+            controller: _searchController,
+            onChanged: (value) => _filterNames(), // Update search results
+            decoration: InputDecoration(
+              hintText: 'Search for a name',
+              border: InputBorder.none, // Remove the border
+              hintStyle: TextStyle(color: Colors.white),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                icon: Icon(Icons.clear, color: Colors.white),
+                onPressed: _clearSearch, // Clear search input
+              )
+                  : null, // Only show the clear button if there's text
+            ),
+            style: TextStyle(color: Colors.white),
           ),
-        ],
+        ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(8.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Column(
           children: [
-            TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                labelText: 'Search for a name',
-                border: OutlineInputBorder(),
-                suffixIcon: IconButton(
-                  icon: Icon(Icons.clear),
-                  onPressed: () {
-                    _searchController.clear();
-                    _loadNames();
-                  },
-                ),
-              ),
-              onChanged: (value) => _filterNames(), // Update search results
-            ),
+            SizedBox(height: 20), // Space between search and list
+            // Display filtered names in a simple list
             Expanded(
-              child: ListView.builder(
+              child: filteredNamesList.isEmpty
+                  ? Center(child: Text('No records found'))
+                  : ListView.builder(
                 itemCount: filteredNamesList.length,
                 itemBuilder: (context, index) {
                   final nameData = filteredNamesList[index];
-                  return Card(
-                    margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-                    elevation: 5,
-                    child: ListTile(
-                      title: Text(nameData['name'], style: TextStyle(fontSize: 18)),
-                      trailing: IconButton(
-                        icon: Icon(Icons.arrow_forward),
-                        onPressed: () {
-                          // Navigate to credit page or desired action
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (context) => CreditPage(name: nameData['name'])),
-                          );
-                        },
-                      ),
+                  return ListTile(
+                    contentPadding: EdgeInsets.symmetric(vertical: 10),
+                    title: Text(nameData['name']),
+                    trailing: IconButton(
+                      icon: Icon(Icons.arrow_forward),
+                      onPressed: () {
+                        // Navigate to credit page or desired action
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => CreditPage(name: nameData['name']),
+                          ),
+                        );
+                      },
                     ),
                   );
                 },

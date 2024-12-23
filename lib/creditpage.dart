@@ -448,6 +448,9 @@ class _CreditPageState extends State<CreditPage> {
 
 
 
+
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -470,52 +473,77 @@ class _CreditPageState extends State<CreditPage> {
                     builder: (context, setState) {
                       return Dialog(
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12.0),
+                          borderRadius: BorderRadius.circular(16.0), // Rounded corners
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(16.0),
+                          padding: const EdgeInsets.all(20.0),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Date Input
-                              InkWell(
-                                child: TextField(
-                                  controller: _dateController,
-                                  readOnly: true,
-                                  decoration: InputDecoration(
-                                    labelText: 'Transaction Date',
-                                    border: OutlineInputBorder(),
-                                    suffixIcon: Icon(Icons.calendar_today),
+                              // Add Transaction Title
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 20.0),
+                                child: Center(
+                                  child: Text(
+                                    'Add Transaction',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.blueAccent, // Color for title
+                                    ),
                                   ),
-                                  onTap: () => _selectDate(context),
+                                ),
+                              ),
+
+                              // Date Input
+                              GestureDetector(
+                                onTap: () => _selectDate(context),
+                                child: AbsorbPointer( // Prevent keyboard from appearing
+                                  child: TextField(
+                                    controller: _dateController,
+                                    readOnly: true,
+                                    decoration: InputDecoration(
+                                      labelText: 'Transaction Date',
+                                      labelStyle: TextStyle(color: Colors.blueGrey),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12.0),
+                                      ),
+                                      suffixIcon: Icon(Icons.calendar_today, color: Colors.blue),
+                                    ),
+                                  ),
                                 ),
                               ),
                               SizedBox(height: 16),
 
                               // Transaction Type (Radio buttons)
-                              Row(
-                                children: [
-                                  Radio<String>(
-                                    value: 'credit',
-                                    groupValue: _transactionType,
-                                    onChanged: (String? value) {
-                                      setState(() {
-                                        _transactionType = value!;
-                                      });
-                                    },
-                                  ),
-                                  Text('Credit'),
-                                  Radio<String>(
-                                    value: 'debit',
-                                    groupValue: _transactionType,
-                                    onChanged: (String? value) {
-                                      setState(() {
-                                        _transactionType = value!;
-                                      });
-                                    },
-                                  ),
-                                  Text('Debit'),
-                                ],
+                              Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                                child: Row(
+                                  children: [
+                                    Radio<String>(
+                                      value: 'credit',
+                                      groupValue: _transactionType,
+                                      onChanged: (String? value) {
+                                        setState(() {
+                                          _transactionType = value!;
+                                        });
+                                      },
+                                    ),
+                                    Text('Credit', style: TextStyle(fontSize: 16)),
+                                    SizedBox(width: 20),
+                                    Radio<String>(
+                                      value: 'debit',
+                                      groupValue: _transactionType,
+                                      onChanged: (String? value) {
+                                        setState(() {
+                                          _transactionType = value!;
+                                        });
+                                      },
+                                    ),
+                                    Text('Debit', style: TextStyle(fontSize: 16)),
+                                  ],
+                                ),
                               ),
                               SizedBox(height: 16),
 
@@ -525,7 +553,10 @@ class _CreditPageState extends State<CreditPage> {
                                 keyboardType: TextInputType.number,
                                 decoration: InputDecoration(
                                   labelText: 'Amount',
-                                  border: OutlineInputBorder(),
+                                  labelStyle: TextStyle(color: Colors.blueGrey),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
                                 ),
                               ),
                               SizedBox(height: 16),
@@ -535,34 +566,48 @@ class _CreditPageState extends State<CreditPage> {
                                 controller: _particularController,
                                 decoration: InputDecoration(
                                   labelText: 'Particular',
-                                  border: OutlineInputBorder(),
+                                  labelStyle: TextStyle(color: Colors.blueGrey),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                  ),
                                 ),
                               ),
-                              SizedBox(height: 16),
+                              SizedBox(height: 24),
 
                               // Save Button
-                              ElevatedButton(
-                                onPressed: () async {
-                                  // Form Validation
-                                  if (_dateController.text.isEmpty ||
-                                      _transactionType == null ||
-                                      _amountController.text.isEmpty ||
-                                      _particularController.text.isEmpty) {
-                                    // Show error message if any field is empty
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Please fill in all fields.'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  } else {
-                                    // Proceed to save the transaction
-                                    await _saveTransaction(); // Call the save method
-                                    Navigator.pop(context); // Close the dialog
-                                    setState(() {}); // Refresh the UI
-                                  }
-                                },
-                                child: Text('Save Transaction'),
+                              Center(
+                                child: ElevatedButton(
+                                  onPressed: () async {
+                                    // Form Validation
+                                    if (_dateController.text.isEmpty ||
+                                        _transactionType == null ||
+                                        _amountController.text.isEmpty ||
+                                        _particularController.text.isEmpty) {
+                                      // Show error message if any field is empty
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text('Please fill in all fields.'),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    } else {
+                                      // Proceed to save the transaction
+                                      await _saveTransaction(); // Call the save method
+                                      Navigator.pop(context); // Close the dialog
+                                      setState(() {}); // Refresh the UI
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                  ),
+                                  child: Text(
+                                    'Save Transaction',
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -572,9 +617,11 @@ class _CreditPageState extends State<CreditPage> {
                   );
                 },
               );
-
             },
           ),
+
+
+
           IconButton(
             onPressed: () {
               _showSearchDialog(); // Open the search dialog

@@ -315,7 +315,33 @@ class _DashboardState extends State<Dashboard> {
 
 
 
+  Future<void> _saveTransaction2(String name) async {
+    if (_dateController.text.isNotEmpty &&
+        _amountController.text.isNotEmpty &&
+        _particularController.text.isNotEmpty) {
+      final transaction = {
+        'date': _dateController.text,
+        'type': _transactionType,
+        'amount': double.tryParse(_amountController.text) ?? 0.0,
+        'particular': name
+      };
+      await AppDatabaseHelper().insertTransaction(transaction);
 
+      // Clear fields after saving
+      _dateController.clear();
+      _amountController.clear();
+      _particularController.clear();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Transaction saved successfully!')),
+      );
+      setState(() {});
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill in all fields.')),
+      );
+    }
+  }
 
 
 
@@ -568,11 +594,15 @@ class _DashboardState extends State<Dashboard> {
                         //Credit button pressed
                         TextButton(
                           onPressed: () {
+                            print(nameData["name"]);
                             showDialog(
                               context: context,
                               builder: (context) {
                                 return StatefulBuilder(
                                   builder: (context, setState) {
+                                    // Ensure transaction type is always credit
+                                    _transactionType = 'credit';
+
                                     return Dialog(
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12.0),
@@ -582,6 +612,18 @@ class _DashboardState extends State<Dashboard> {
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            // Credit Transaction Title
+                                            Padding(
+                                              padding: const EdgeInsets.only(bottom: 16.0),
+                                              child: Text(
+                                                'Credit Transaction', // Title for the dialog
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                            ),
                                             // Date Input
                                             InkWell(
                                               child: TextField(
@@ -594,31 +636,6 @@ class _DashboardState extends State<Dashboard> {
                                                 ),
                                                 onTap: () => _selectDate(context),
                                               ),
-                                            ),
-                                            SizedBox(height: 16),
-                                            Row(
-                                              children: [
-                                                Radio<String>(
-                                                  value: 'credit',
-                                                  groupValue: _transactionType,
-                                                  onChanged: (String? value) {
-                                                    setState(() {
-                                                      _transactionType = value!;
-                                                    });
-                                                  },
-                                                ),
-                                                Text('Credit'),
-                                                Radio<String>(
-                                                  value: 'debit',
-                                                  groupValue: _transactionType,
-                                                  onChanged: (String? value) {
-                                                    setState(() {
-                                                      _transactionType = value!;
-                                                    });
-                                                  },
-                                                ),
-                                                Text('Debit'),
-                                              ],
                                             ),
                                             SizedBox(height: 16),
 
@@ -646,7 +663,6 @@ class _DashboardState extends State<Dashboard> {
                                             ElevatedButton(
                                               onPressed: () async {
                                                 if (_dateController.text.isEmpty ||
-                                                    _transactionType == null ||
                                                     _amountController.text.isEmpty ||
                                                     _particularController.text.isEmpty) {
                                                   // Show error message if any field is empty
@@ -657,23 +673,21 @@ class _DashboardState extends State<Dashboard> {
                                                     ),
                                                   );
                                                 } else {
-                                                  // Map<String, dynamic> transaction = {
-                                                  //   "date":_dateController.text,
-                                                  //   "type": "credit",
-                                                  //   "amount": double.tryParse(_amountController.text) ?? 0.0,
-                                                  //   "particular": _particularController.text.toString()
-                                                  // };
-                                                  // await AppDatabaseHelper().insertTransaction(transaction);
+                                                  await _saveTransaction2(nameData["name"]);
 
-                                                  await _saveTransaction();
-                                                  // Notify the parent widget to refresh data
-                                                  Navigator.pop(context, true);
-                                                  // Return true to indicate success
+                                                  // Update the credit value directly here
+                                                  setState(() {
+                                                    // Update credit after transaction
+                                                    double newCredit = double.tryParse(_amountController.text) ?? 0.0;
+                                                    nameData['credit'] = (nameData['credit'] ?? 0.0) + newCredit;
+                                                  });
+
+                                                  // Close the dialog and automatically refresh the UI
+                                                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),));
                                                 }
                                               },
                                               child: Text('Save Transaction'),
                                             ),
-
                                           ],
                                         ),
                                       ),
@@ -682,7 +696,6 @@ class _DashboardState extends State<Dashboard> {
                                 );
                               },
                             );
-
                           },
                           style: TextButton.styleFrom(
                             padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
@@ -711,6 +724,7 @@ class _DashboardState extends State<Dashboard> {
                             ],
                           ),
                         ),
+
                         TextButton(
                           onPressed: () {
                             showDialog(
@@ -718,6 +732,9 @@ class _DashboardState extends State<Dashboard> {
                               builder: (context) {
                                 return StatefulBuilder(
                                   builder: (context, setState) {
+                                    // Set transaction type to debit by default
+                                    _transactionType = 'debit';
+
                                     return Dialog(
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12.0),
@@ -727,6 +744,18 @@ class _DashboardState extends State<Dashboard> {
                                         child: Column(
                                           mainAxisSize: MainAxisSize.min,
                                           children: [
+                                            // Debit Transaction Title
+                                            Padding(
+                                              padding: const EdgeInsets.only(bottom: 16.0),
+                                              child: Text(
+                                                'Debit Transaction', // Title for the dialog
+                                                style: TextStyle(
+                                                  fontSize: 20,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: Colors.red,
+                                                ),
+                                              ),
+                                            ),
                                             // Date Input
                                             InkWell(
                                               child: TextField(
@@ -739,33 +768,6 @@ class _DashboardState extends State<Dashboard> {
                                                 ),
                                                 onTap: () => _selectDate(context),
                                               ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            // Transaction Type (Radio buttons)
-                                            Row(
-                                              children: [
-                                                Radio<String>(
-                                                  value: 'credit',
-                                                  groupValue: _transactionType,
-                                                  onChanged: (String? value) {
-                                                    setState(() {
-                                                      _transactionType = value!;
-                                                    });
-                                                  },
-                                                ),
-                                                Text('Credit'),
-                                                Radio<String>(
-                                                  value: 'debit',
-                                                  groupValue: _transactionType,
-                                                  onChanged: (String? value) {
-                                                    setState(() {
-                                                      _transactionType = value!;
-                                                    });
-                                                  },
-                                                ),
-                                                Text('Debit'),
-                                              ],
                                             ),
                                             SizedBox(height: 16),
 
@@ -795,10 +797,8 @@ class _DashboardState extends State<Dashboard> {
                                               onPressed: () async {
                                                 // Form Validation
                                                 if (_dateController.text.isEmpty ||
-                                                    _transactionType == null ||
                                                     _amountController.text.isEmpty ||
                                                     _particularController.text.isEmpty) {
-                                                  // Show error message if any field is empty
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     SnackBar(
                                                       content: Text('Please fill in all fields.'),
@@ -806,9 +806,8 @@ class _DashboardState extends State<Dashboard> {
                                                     ),
                                                   );
                                                 } else {
-                                                  // Proceed to save the transaction
-                                                  await _saveTransaction(); // Call the save method
-                                                  Navigator.pop(context); // Close the dialog
+                                                  await _saveTransaction2(nameData["name"]);
+                                                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
                                                   setState(() {}); // Refresh the UI
                                                 }
                                               },
@@ -822,7 +821,6 @@ class _DashboardState extends State<Dashboard> {
                                 );
                               },
                             );
-
                           },
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
@@ -851,6 +849,7 @@ class _DashboardState extends State<Dashboard> {
                             ],
                           ),
                         ),
+
                         TextButton(
                           onPressed: () {
                             Navigator.push(
