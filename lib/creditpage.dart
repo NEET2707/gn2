@@ -272,6 +272,17 @@ class _CreditPageState extends State<CreditPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Start Date Input
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Text(
+                        'ADD Date', // Title for the dialog
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
                     InkWell(
                       child: TextField(
                         controller: _startDateController,
@@ -484,7 +495,7 @@ class _CreditPageState extends State<CreditPage> {
                 pw.Text('Total Credit: ${_calculateTotalCredit(transactions)}', style: pw.TextStyle(fontSize: 18)),
                 pw.Text('Total Debit: ${_calculateTotalDebit(transactions)}', style: pw.TextStyle(fontSize: 18)),
                 pw.Text(
-                  'Balance: ${_calculateBalance(_calculateTotalCredit(transactions), _calculateTotalDebit(transactions))}',
+                  'Total Balance: ${_calculateBalance(_calculateTotalCredit(transactions), _calculateTotalDebit(transactions))}',
                   style: pw.TextStyle(fontSize: 18),
                 ),
               ],
@@ -541,7 +552,7 @@ class _CreditPageState extends State<CreditPage> {
           widget.name, // Display the name passed to the widget
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Color(0xFF5C9EAD),
+        backgroundColor: Colors.blueGrey.shade600,
         actions: [
           // Add Transaction Button
           IconButton(
@@ -884,7 +895,7 @@ class _CreditPageState extends State<CreditPage> {
                                             padding: const EdgeInsets.all(8.0),
                                             child: Column(
                                               children: [
-                                                Text('Balance',
+                                                Text('Total Balance',
                                                     style: TextStyle(
                                                         color: Colors.white,
                                                         fontWeight: FontWeight.bold,

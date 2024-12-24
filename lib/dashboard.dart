@@ -294,6 +294,117 @@ class _DashboardState extends State<Dashboard> {
 
 
 
+
+mytel(nameData,type){
+    return   showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            // Ensure transaction type is always credit
+            _transactionType = type == 0 ? "credit" : "debit";
+
+            return Dialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Credit Transaction Title
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Text(
+                        '${type == 0 ? "Credit" : "Debit"} Transaction', // Title for the dialog
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: type == 0 ? Colors.green : Colors.red, // Dynamic color
+                        ),
+                      ),
+                    ),
+
+                    // Date Input
+                    InkWell(
+                      child: TextField(
+                        controller: _dateController,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: 'Transaction Date',
+                          border: OutlineInputBorder(),
+                          suffixIcon: Icon(Icons.calendar_today),
+                        ),
+                        onTap: () => _selectDate(context),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    // Amount Input
+                    TextField(
+                      controller: _amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'Amount',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    // Particular Input
+                    TextField(
+                      controller: _particularController,
+                      decoration: InputDecoration(
+                        labelText: 'Particular',
+                        border: OutlineInputBorder(),
+                      ),
+                    ),
+                    SizedBox(height: 16),
+
+                    ElevatedButton(
+                      onPressed: () async {
+                        if (_dateController.text.isEmpty ||
+                            _amountController.text.isEmpty ||
+                            _particularController.text.isEmpty) {
+                          // Show error message if any field is empty
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Please fill in all fields.'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        } else {
+                          await _saveTransaction2(nameData["name"]);
+
+                          // Update the credit value directly here
+                          setState(() async {
+                            if(type == 0){
+                              double newCredit = double.tryParse(_amountController.text) ?? 0.0;
+                              nameData['credit'] = (nameData['credit'] ?? 0.0) + newCredit;
+                            }else{
+                              await _saveTransaction2(nameData["name"]);
+                                                     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
+                                                      // Refresh the UI
+                            }
+                          });
+
+                          // Close the dialog and automatically refresh the UI
+                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),));
+                        }
+                      },
+                      child: Text('Save Transaction'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -309,7 +420,7 @@ class _DashboardState extends State<Dashboard> {
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: Color(0xFF5C9EAD),
+        backgroundColor: Colors.blueGrey.shade600,
         actions: [
           IconButton(
             icon: Icon(Icons.search, color: Colors.white),
@@ -352,7 +463,7 @@ class _DashboardState extends State<Dashboard> {
 
       // Floating Action Button
       floatingActionButton: Material(
-        color: Color(0xF80CBC4), // Button color
+        color: Colors.blueGrey.shade600, // Button color
         shape: CircleBorder(), // Circular shape
         elevation: 6.0, // Shadow/elevation
         child: InkWell(
@@ -462,379 +573,190 @@ class _DashboardState extends State<Dashboard> {
         itemCount: filteredNamesList.length,
         itemBuilder: (context, index) {
           final nameData = filteredNamesList[index];
-          return Card(
-            margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-            elevation: 5,
-            child: InkWell(
-              onTap: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'])),
-                );
-                _loadNames();
-              },
-              child: Column(
-                children: [
-                  ListTile(
-                    title: Text(
-                      nameData['name'],
-                      style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: Icon(Icons.edit_note, size: 20),
-                          onPressed: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'])),
-                            );
-                          },
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, size: 20),
-                          onPressed: () async {
-                            bool? confirmDelete = await showDialog<bool>(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return AlertDialog(
-                                  title: Text("Confirm Deletion"),
-                                  content: Text("Are you sure you want to delete this item?"),
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop(false); // User cancelled deletion
-                                      },
-                                      child: Text("Cancel"),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        Navigator.of(context).pop(true); // User confirmed deletion
-                                      },
-                                      child: Text("Delete"),
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
-
-                            if (confirmDelete == true) {
-                              int idToDelete = nameData['id'];
-                              await dbHelper.deleteName(idToDelete);
-                              _loadNames();
-                            }
-                          },
-                        ),
-
-                      ],
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-
-
-                        //Credit button pressed
-                        TextButton(
-                          onPressed: () {
-                            print(nameData["name"]);
-                            showDialog(
-                              context: context,
-                              builder: (context) {
-                                return StatefulBuilder(
-                                  builder: (context, setState) {
-                                    // Ensure transaction type is always credit
-                                    _transactionType = 'credit';
-
-                                    return Dialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12.0),
+          return Padding(
+            padding: const EdgeInsets.all(0.000010),
+            child: Card(
+              margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
+              elevation: 5,
+              child: InkWell(
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'])),
+                  );
+                  _loadNames();
+                },
+                child: Column(
+                  children: [
+                    ListTile(
+                      title: Text(
+                        nameData['name'],
+                        style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
+                      ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.edit_note, size: 20),
+                            onPressed: () async {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'])),
+                              );
+                            },
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, size: 20),
+                            onPressed: () async {
+                              bool? confirmDelete = await showDialog<bool>(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: Text("Confirm Deletion"),
+                                    content: Text("Are you sure you want to delete this item?"),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop(false); // User cancelled deletion
+                                        },
+                                        child: Text("Cancel"),
                                       ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            // Credit Transaction Title
-                                            Padding(
-                                              padding: const EdgeInsets.only(bottom: 16.0),
-                                              child: Text(
-                                                'Credit Transaction', // Title for the dialog
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.green,
-                                                ),
-                                              ),
-                                            ),
-                                            // Date Input
-                                            InkWell(
-                                              child: TextField(
-                                                controller: _dateController,
-                                                readOnly: true,
-                                                decoration: InputDecoration(
-                                                  labelText: 'Transaction Date',
-                                                  border: OutlineInputBorder(),
-                                                  suffixIcon: Icon(Icons.calendar_today),
-                                                ),
-                                                onTap: () => _selectDate(context),
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            // Amount Input
-                                            TextField(
-                                              controller: _amountController,
-                                              keyboardType: TextInputType.number,
-                                              decoration: InputDecoration(
-                                                labelText: 'Amount',
-                                                border: OutlineInputBorder(),
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            // Particular Input
-                                            TextField(
-                                              controller: _particularController,
-                                              decoration: InputDecoration(
-                                                labelText: 'Particular',
-                                                border: OutlineInputBorder(),
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            ElevatedButton(
-                                              onPressed: () async {
-                                                if (_dateController.text.isEmpty ||
-                                                    _amountController.text.isEmpty ||
-                                                    _particularController.text.isEmpty) {
-                                                  // Show error message if any field is empty
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('Please fill in all fields.'),
-                                                      backgroundColor: Colors.red,
-                                                    ),
-                                                  );
-                                                } else {
-                                                  await _saveTransaction2(nameData["name"]);
-
-                                                  // Update the credit value directly here
-                                                  setState(() {
-                                                    // Update credit after transaction
-                                                    double newCredit = double.tryParse(_amountController.text) ?? 0.0;
-                                                    nameData['credit'] = (nameData['credit'] ?? 0.0) + newCredit;
-                                                  });
-
-                                                  // Close the dialog and automatically refresh the UI
-                                                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),));
-                                                }
-                                              },
-                                              child: Text('Save Transaction'),
-                                            ),
-                                          ],
-                                        ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop(true); // User confirmed deletion
+                                        },
+                                        child: Text("Delete"),
                                       ),
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                            backgroundColor: Colors.green.withOpacity(0.1), // Optional background color
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
+                                    ],
+                                  );
+                                },
+                              );
+
+                              if (confirmDelete == true) {
+                                int idToDelete = nameData['id'];
+                                await dbHelper.deleteName(idToDelete);
+                                _loadNames();
+                              }
+                            },
+                          ),
+
+                        ],
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+
+
+                          //Credit button pressed
+                          TextButton(
+                            onPressed: () {
+                              print(nameData["name"]);
+                              mytel(nameData,0);
+
+                            },
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                              backgroundColor: Colors.green.withOpacity(0.1), // Optional background color
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Credit (+)',
+                                  style: TextStyle(
+                                    color: Colors.green, // Text color
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  nameData['credit']?.toString() ?? '0',
+                                  style: TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Credit (+)',
-                                style: TextStyle(
-                                  color: Colors.green, // Text color
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
+
+                          TextButton(
+                            onPressed: () {
+                              mytel(nameData,1);
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                              backgroundColor: Colors.red.withOpacity(0.1), // Optional background color
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
                               ),
-                              Text(
-                                nameData['credit']?.toString() ?? '0',
-                                style: TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 14,
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Debit (-)', // Label text
+                                  style: TextStyle(
+                                    color: Colors.red, // Text color
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        TextButton(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder: (context) {
-                                return StatefulBuilder(
-                                  builder: (context, setState) {
-                                    // Set transaction type to debit by default
-                                    _transactionType = 'debit';
-
-                                    return Dialog(
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12.0),
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            // Debit Transaction Title
-                                            Padding(
-                                              padding: const EdgeInsets.only(bottom: 16.0),
-                                              child: Text(
-                                                'Debit Transaction', // Title for the dialog
-                                                style: TextStyle(
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                  color: Colors.red,
-                                                ),
-                                              ),
-                                            ),
-                                            // Date Input
-                                            InkWell(
-                                              child: TextField(
-                                                controller: _dateController,
-                                                readOnly: true,
-                                                decoration: InputDecoration(
-                                                  labelText: 'Transaction Date',
-                                                  border: OutlineInputBorder(),
-                                                  suffixIcon: Icon(Icons.calendar_today),
-                                                ),
-                                                onTap: () => _selectDate(context),
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            // Amount Input
-                                            TextField(
-                                              controller: _amountController,
-                                              keyboardType: TextInputType.number,
-                                              decoration: InputDecoration(
-                                                labelText: 'Amount',
-                                                border: OutlineInputBorder(),
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            // Particular Input
-                                            TextField(
-                                              controller: _particularController,
-                                              decoration: InputDecoration(
-                                                labelText: 'Particular',
-                                                border: OutlineInputBorder(),
-                                              ),
-                                            ),
-                                            SizedBox(height: 16),
-
-                                            // Save Button
-                                            ElevatedButton(
-                                              onPressed: () async {
-                                                // Form Validation
-                                                if (_dateController.text.isEmpty ||
-                                                    _amountController.text.isEmpty ||
-                                                    _particularController.text.isEmpty) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    SnackBar(
-                                                      content: Text('Please fill in all fields.'),
-                                                      backgroundColor: Colors.red,
-                                                    ),
-                                                  );
-                                                } else {
-                                                  await _saveTransaction2(nameData["name"]);
-                                                  Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
-                                                  setState(() {}); // Refresh the UI
-                                                }
-                                              },
-                                              child: Text('Save Transaction'),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                );
-                              },
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                            backgroundColor: Colors.red.withOpacity(0.1), // Optional background color
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
+                                Text(
+                                  nameData['debit']?.toString() ?? '0', // Value
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Debit (-)', // Label text
-                                style: TextStyle(
-                                  color: Colors.red, // Text color
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                nameData['debit']?.toString() ?? '0', // Value
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
 
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => CreditPage(name: nameData["name"],)),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                            backgroundColor: Colors.blue.withOpacity(0.1), // Optional background color
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8.0),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData["name"],)),
+                              );
+                            },
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                              backgroundColor: Colors.blue.withOpacity(0.1), // Optional background color
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'Balance', // Label text
+                                  style: TextStyle(
+                                    color: Colors.blue, // Text color
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                Text(
+                                  nameData['balance']?.toString() ?? '0', // Value
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                          child: Column(
-                            children: [
-                              Text(
-                                'Balance', // Label text
-                                style: TextStyle(
-                                  color: Colors.blue, // Text color
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                nameData['balance']?.toString() ?? '0', // Value
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
 
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           );
