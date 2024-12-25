@@ -93,7 +93,7 @@ class _SearchPageState extends State<SearchPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => CreditPage(name: nameData['name']),
+                            builder: (context) => CreditPage(name: nameData['name'], id: nameData["id"],),
                           ),
                         );
                       },

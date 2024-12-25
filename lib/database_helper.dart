@@ -1,12 +1,15 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
+import 'Authtentication/users.dart';
+
 class AppDatabaseHelper {
   static final AppDatabaseHelper _instance = AppDatabaseHelper._();
   static Database? _database;
 
   AppDatabaseHelper._();
 
+  static AppDatabaseHelper get instance => _instance;
   factory AppDatabaseHelper() {
     return _instance;
   }
@@ -16,10 +19,12 @@ class AppDatabaseHelper {
     if (_database != null) return _database!;
 
     _database = await _initDatabase();
+
     return _database!;
   }
 
   // Initialize the database and create tables
+  // Removed initDB() method entirely
   Future<Database> _initDatabase() async {
     String path = join(await getDatabasesPath(), 'app_database.db');
     return openDatabase(
@@ -27,26 +32,32 @@ class AppDatabaseHelper {
       version: 1,
       onCreate: (db, version) async {
         // Create 'names' table
-        await db.execute('''
-          CREATE TABLE names(
+        await db.execute('''CREATE TABLE names(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT
-          )
-        ''');
+          )''');
 
         // Create 'transactions' table
-        await db.execute('''
-          CREATE TABLE transactions(
+        await db.execute('''CREATE TABLE transactions(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             date TEXT,
             type TEXT,
             amount REAL,
-            particular TEXT
-          )
-        ''');
+            particular TEXT,
+            name_id INTEGER,
+            FOREIGN KEY (name_id) REFERENCES names (id)
+          )''');
+
+        // Create 'users' table during database initialization
+        await db.execute('''CREATE TABLE users(
+            usrId INTEGER PRIMARY KEY AUTOINCREMENT,
+            usrName TEXT UNIQUE,
+            usrPassword TEXT
+          )''');
       },
     );
   }
+
 
   // ==========================
   // NAMES TABLE METHODS
@@ -128,12 +139,12 @@ class AppDatabaseHelper {
 
 
 
-  Future<List<Map<String, dynamic>>> getTransactionsByName(String name) async {
+  Future<List<Map<String, dynamic>>> getTransactionsByName(int id) async {
     final db = await database;
     return await db.query(
       'transactions',
-      where: 'particular = ?',
-      whereArgs: [name],
+      where: 'name_id = ?',
+      whereArgs: [id],
     );
   }
 
@@ -147,7 +158,7 @@ class AppDatabaseHelper {
     List<Map<String, dynamic>> updatedList = [];
 
     for (var nameData in names) {
-      final transactions = await getTransactionsByName(nameData['name'].toString());
+      final transactions = await getTransactionsByName(int.parse(nameData['id'].toString()));
 
       double credit = 0.0;
       double debit = 0.0;
@@ -196,19 +207,36 @@ class AppDatabaseHelper {
     return {'totalCredit': 0.0, 'totalDebit': 0.0, 'totalBalance': 0.0};
   }
 
-  // ==========================
-  // DATABASE MAINTENANCE METHODS
-  // ==========================
 
-  Future<void> checkDatabaseTables() async {
-    final db = await database;
-    var result = await db.rawQuery('SELECT name FROM sqlite_master WHERE type="table"');
-    print('Tables in database: $result');
+
+//login page
+
+  Future<bool> login(Users user) async {
+    final Database db = await database;
+    var result = await db.rawQuery(
+        "SELECT * FROM users WHERE usrName = '${user.usrName}' AND usrPassword = '${user.usrPassword}'");
+    return result.isNotEmpty;
   }
 
-  // Method to delete the entire database file
-  Future<void> deleteDatabaseFile() async {
-    final path = join(await getDatabasesPath(), 'app_database.db');
-    await deleteDatabase(path); // Correct function usage
+  // Signup Method
+  Future<int> signup(Users user) async {
+    final Database db = await database;
+    return db.insert('users', user.toMap());
+  }
+
+
+
+  String users = "create table users (usrId INTEGER PRIMARY KEY AUTOINCREMENT, usrName Text UNIQUE, usrPassword Text)";
+  Future<Database> initDB() async{
+    final databasePath = await getDatabasesPath();
+    final path = join(databasePath, );
+
+    return openDatabase(path, version: 1, onCreate: (db, version) async{
+      await db.execute(users);
+    });
   }
 }
+
+
+
+

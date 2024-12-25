@@ -10,15 +10,15 @@ import 'package:open_file/open_file.dart';
 
 class CreditPage extends StatefulWidget {
   final String name;
+  final int id;
 
-  const CreditPage({super.key, required this.name});
+  const CreditPage({super.key, required this.name, required this.id});
 
   @override
   _CreditPageState createState() => _CreditPageState();
 }
 
 class _CreditPageState extends State<CreditPage> {
-
 
   DateTime startDate = DateTime(2023, 1, 1);
   DateTime endDate = DateTime.now();
@@ -43,7 +43,8 @@ class _CreditPageState extends State<CreditPage> {
     super.dispose();
   }
 
-  // Calculate total credit
+
+
   double _calculateTotalCredit(List<Map<String, dynamic>> transactions) {
     double totalCredit = 0.0;
     for (var tx in transactions) {
@@ -127,7 +128,8 @@ class _CreditPageState extends State<CreditPage> {
         'date': _dateController.text,
         'type': _transactionType,
         'amount': double.tryParse(_amountController.text) ?? 0.0,
-        'particular': widget.name, // Save the name dynamically
+        'particular': _particularController.text,
+        "name_id": widget.id
       };
       await AppDatabaseHelper().insertTransaction(transaction);
 
@@ -148,112 +150,8 @@ class _CreditPageState extends State<CreditPage> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchTransactions() async {
-    return await AppDatabaseHelper().getTransactionsByName(widget.name);
+    return await AppDatabaseHelper().getTransactionsByName(widget.id);
   }
-
-
-  // void _showSearchDialog() {
-  //   showDialog(
-  //     context: context,
-  //     builder: (context) {
-  //       return StatefulBuilder(
-  //         builder: (context, setState) {
-  //           return Dialog(
-  //             shape: RoundedRectangleBorder(
-  //               borderRadius: BorderRadius.circular(12.0),
-  //             ),
-  //             child: Padding(
-  //               padding: const EdgeInsets.all(16.0),
-  //               child: Column(
-  //                 mainAxisSize: MainAxisSize.min,
-  //                 children: [
-  //                   // Start Date Input
-  //                   InkWell(
-  //                     child: TextField(
-  //                       controller: _startDateController,
-  //                       decoration: InputDecoration(
-  //                         labelText: 'Start Date',
-  //                         border: OutlineInputBorder(),
-  //                         suffixIcon: Icon(Icons.calendar_today),
-  //                       ),
-  //                       onTap: () async {
-  //                         // Show date picker to select start date
-  //                         await _selectStartDate(context);
-  //                         setState(() {}); // Refresh state after selecting the start date
-  //                       },
-  //                       keyboardType: TextInputType.datetime, // Allow typing of date
-  //                     ),
-  //                   ),
-  //                   SizedBox(height: 16),
-  //
-  //                   // End Date Input
-  //                   InkWell(
-  //                     child: TextField(
-  //                       controller: _endDateController,
-  //                       decoration: InputDecoration(
-  //                         labelText: 'End Date',
-  //                         border: OutlineInputBorder(),
-  //                         suffixIcon: Icon(Icons.calendar_today),
-  //                       ),
-  //                       onTap: () async {
-  //                         // Show date picker to select end date
-  //                         await _selectEndDate(context);
-  //                         setState(() {}); // Refresh state after selecting the end date
-  //                       },
-  //                       keyboardType: TextInputType.datetime, // Allow typing of date
-  //                     ),
-  //                   ),
-  //                   SizedBox(height: 16),
-  //
-  //                   // Search Button
-  //                   ElevatedButton(
-  //                     onPressed: () async {
-  //                       // Ensure that both start and end dates are selected or entered
-  //                       if (_startDateController.text.isNotEmpty &&
-  //                           _endDateController.text.isNotEmpty) {
-  //                         // Fetch transactions between the selected or entered dates
-  //                         List<Map<String, dynamic>> transactions =
-  //                         await _searchTransactionsBetweenDates(
-  //                             _startDateController.text,
-  //                             _endDateController.text);
-  //
-  //                         // Calculate total credit, debit, and balance for the filtered transactions
-  //                         double totalCredit = _calculateTotalCredit(transactions);
-  //                         double totalDebit = _calculateTotalDebit(transactions);
-  //                         double balance = _calculateBalance(totalCredit, totalDebit);
-  //
-  //                         // Display the results in a new page or alert
-  //                         Navigator.push(
-  //                           context,
-  //                           MaterialPageRoute(
-  //                             builder: (context) => SearchResultPage(
-  //                               totalCredit: totalCredit,
-  //                               totalDebit: totalDebit,
-  //                               balance: balance,
-  //                               transactions: transactions,
-  //                             ),
-  //                           ),
-  //                         );
-  //                       } else {
-  //                         ScaffoldMessenger.of(context).showSnackBar(
-  //                           SnackBar(
-  //                             content: Text(
-  //                                 'Please select both start and end dates.'),
-  //                           ),
-  //                         );
-  //                       }
-  //                     },
-  //                     child: Text('Search'),
-  //                   ),
-  //                 ],
-  //               ),
-  //             ),
-  //           );
-  //         },
-  //       );
-  //     },
-  //   );
-  // }
 
   List<Map<String, dynamic>> _filteredTransactions = [];
   void _showSearchDialog() {
@@ -414,10 +312,12 @@ class _CreditPageState extends State<CreditPage> {
 
       final pdf = pw.Document();
 
-      // Fetch the transactions to include in the PDF
-      List<Map<String, dynamic>> transactions = await AppDatabaseHelper().getTransactionsByName(widget.name);
-      print(transactions); // Check the data in the console
+      // Use the filtered transactions for the PDF
+      List<Map<String, dynamic>> transactions = _filteredTransactions.isNotEmpty
+          ? _filteredTransactions
+          : await AppDatabaseHelper().getTransactionsByName(widget.id);
 
+      print(transactions); // Check the data in the console
 
       // Add a page to the PDF
       pdf.addPage(
@@ -464,14 +364,11 @@ class _CreditPageState extends State<CreditPage> {
                     ),
                     // Table rows for each transaction
                     ...transactions.map((tx) {
-                      // Debug: print individual transaction data
-                      print("-------------------------> $tx");
-
                       return pw.TableRow(
                         children: [
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8.0),
-                            child: pw.Text(tx['date'] ?? 'N/A'), // Ensure data is available
+                            child: pw.Text(tx['date'] ?? 'N/A'),
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8.0),
@@ -479,11 +376,11 @@ class _CreditPageState extends State<CreditPage> {
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8.0),
-                            child: pw.Text(tx['type'] == 'credit' ? (tx['amount']?.toString() ?? '0') : ''),
+                            child: pw.Text(tx['type'] == 'credit' ? (tx['amount']?.toString() ?? '0') : '--'),
                           ),
                           pw.Padding(
                             padding: const pw.EdgeInsets.all(8.0),
-                            child: pw.Text(tx['type'] == 'debit' ? (tx['amount']?.toString() ?? '0') : ''),
+                            child: pw.Text(tx['type'] == 'debit' ? (tx['amount']?.toString() ?? '0') : '--'),
                           ),
                         ],
                       );
@@ -528,7 +425,6 @@ class _CreditPageState extends State<CreditPage> {
 
       // Open the saved PDF
       await OpenFile.open(outputFile.path);
-
     } catch (e) {
       print("Error generating PDF: $e");
 
@@ -712,8 +608,6 @@ class _CreditPageState extends State<CreditPage> {
             },
           ),
 
-
-
           IconButton(
             onPressed: () {
               _showSearchDialog(); // Open the search dialog
@@ -751,17 +645,20 @@ class _CreditPageState extends State<CreditPage> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Expanded(
-                      child: Text('Date',
+                      child: Text('No',
                           style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(
+                      child: Text('Date',
+                          style: TextStyle(fontWeight: FontWeight.bold)),flex: 2,),
                   Expanded(
                       child: Text('Particular',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
+                          style: TextStyle(fontWeight: FontWeight.bold)),flex: 2),
                   Expanded(
                       child: Text('Credit',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
+                          style: TextStyle(fontWeight: FontWeight.bold)),flex: 2),
                   Expanded(
                       child: Text('Debit',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
+                          style: TextStyle(fontWeight: FontWeight.bold)),flex: 1),
                 ],
               ),
             ),
@@ -779,143 +676,129 @@ class _CreditPageState extends State<CreditPage> {
                 } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return Center(child: Text('No transactions available.'));
                 } else {
-                  var transactions = snapshot.data!;
+                  // Display filtered transactions if available
+                  var transactions = _filteredTransactions.isEmpty
+                      ? snapshot.data!
+                      : _filteredTransactions;
+
                   double totalCredit = _calculateTotalCredit(transactions);
                   double totalDebit = _calculateTotalDebit(transactions);
                   double balance = _calculateBalance(totalCredit, totalDebit);
 
                   return Column(
                     children: [
-
                       Expanded(
-                        child: FutureBuilder<List<Map<String, dynamic>>>(
-                          future: _fetchTransactions(),
-                          builder: (context, snapshot) {
-                            if (snapshot.connectionState == ConnectionState.waiting) {
-                              return Center(child: CircularProgressIndicator());
-                            } else if (snapshot.hasError) {
-                              return Center(child: Text('Error: ${snapshot.error}'));
-                            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                              return Center(child: Text('No transactions available.'));
-                            } else {
-                              // Display filtered transactions if available
-                              var transactions = _filteredTransactions.isEmpty
-                                  ? snapshot.data!
-                                  : _filteredTransactions;
-
-                              double totalCredit = _calculateTotalCredit(transactions);
-                              double totalDebit = _calculateTotalDebit(transactions);
-                              double balance = _calculateBalance(totalCredit, totalDebit);
-
-                              return Column(
-                                children: [
-                                  Expanded(
-                                    child: ListView.builder(
-                                      itemCount: transactions.length,
-                                      itemBuilder: (context, index) {
-                                        var transaction = transactions[index];
-                                        return Container(
-                                          color: index % 2 == 0
-                                              ? Colors.white
-                                              : Colors.grey[200],
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(8.0),
-                                            child: Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Expanded(child: Text('${transaction['date']}')),
-                                                Expanded(child: Text('${transaction['particular']}')),
-                                                Expanded(
-                                                  child: Text(
-                                                    transaction['type'] == 'credit'
-                                                        ? '\$${transaction['amount']}'
-                                                        : '0.00',
-                                                    style: TextStyle(color: Colors.green),
-                                                  ),
-                                                ),
-                                                Expanded(
-                                                  child: Text(
-                                                    transaction['type'] == 'debit'
-                                                        ? '\$${transaction['amount']}'
-                                                        : '0.00',
-                                                    style: TextStyle(color: Colors.red),
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  Container(
-                                    width: double.infinity,
-                                    color: Colors.white,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        // Display totals
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Column(
-                                            children: [
-                                              Text('Total Credit',
-                                                  style: TextStyle(
-                                                      color: Colors.green,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 16)),
-                                              Text('${totalCredit.toStringAsFixed(2)}',
-                                                  style: TextStyle(
-                                                      color: Colors.green,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 16)),
-                                            ],
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Column(
-                                            children: [
-                                              Text('Total Debit',
-                                                  style: TextStyle(
-                                                      color: Colors.red,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 16)),
-                                              Text('${totalDebit.toStringAsFixed(2)}',
-                                                  style: TextStyle(
-                                                      color: Colors.red,
-                                                      fontWeight: FontWeight.bold,
-                                                      fontSize: 16)),
-                                            ],
-                                          ),
-                                        ),
-                                        Container(
-                                          color: Color(0xFF5C9EAD),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(8.0),
-                                            child: Column(
-                                              children: [
-                                                Text('Total Balance',
-                                                    style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 16)),
-                                                Text('${balance.toStringAsFixed(2)}',
-                                                    style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontWeight: FontWeight.bold,
-                                                        fontSize: 16)),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }
+                        child: RefreshIndicator(
+                          onRefresh: () async {
+                            await _fetchTransactions();
                           },
+                          child: ListView.builder(
+                            itemCount: transactions.length,
+                            itemBuilder: (context, index) {
+                              var transaction = transactions[index];
+                              return Container(
+                                color: index % 2 == 0
+                                    ? Colors.white
+                                    : Colors.grey[200],
+                                child: Padding(
+                                  padding: const EdgeInsets.all(8.0),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+
+                                      Expanded(child: Text('${index+1}'),),
+                                      Expanded(child: Text('${transaction['date']}'),flex: 2,),
+                                      SizedBox(width: 10,),
+                                      Expanded(child: Text('${transaction['particular']}'), flex: 2,),
+                                      Expanded(
+                                        child: Text(
+                                          transaction['type'] == 'credit'
+                                              ? '₹${transaction['amount']}'
+                                              : '0.00',
+                                          style: TextStyle(color: Colors.green),
+                                        ),
+                                        flex: 2,
+                                      ),
+                                      Expanded(
+                                        flex: 1,
+                                        child: Text(
+                                          transaction['type'] == 'debit'
+                                              ? '₹${transaction['amount']}'
+                                              : '0.00',
+                                          style: TextStyle(color: Colors.red),
+                                        ),
+                                      ),
+
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: double.infinity,
+                        color: Colors.white,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Display totals
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: [
+                                  Text('Total Credit',
+                                      style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16)),
+                                  Text('${totalCredit.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                          color: Colors.green,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16)),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Column(
+                                children: [
+                                  Text('Total Debit',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16)),
+                                  Text('${totalDebit.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                          color: Colors.red,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16)),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              color: Color(0xFF5C9EAD),
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Column(
+                                  children: [
+                                    Text('Total Balance',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16)),
+                                    Text('${balance.toStringAsFixed(2)}',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],

@@ -263,7 +263,7 @@ class _DashboardState extends State<Dashboard> {
 
 
 
-  Future<void> _saveTransaction2(String name) async {
+  Future<void> _saveTransaction2(String name, int id) async {
     if (_dateController.text.isNotEmpty &&
         _amountController.text.isNotEmpty &&
         _particularController.text.isNotEmpty) {
@@ -271,7 +271,8 @@ class _DashboardState extends State<Dashboard> {
         'date': _dateController.text,
         'type': _transactionType,
         'amount': double.tryParse(_amountController.text) ?? 0.0,
-        'particular': name
+        'particular': name,
+        'name_id': id
       };
       await AppDatabaseHelper().insertTransaction(transaction);
 
@@ -295,7 +296,9 @@ class _DashboardState extends State<Dashboard> {
 
 
 
-mytel(nameData,type){
+
+
+  mytel(nameData,type){
     return   showDialog(
       context: context,
       builder: (context) {
@@ -375,16 +378,18 @@ mytel(nameData,type){
                             ),
                           );
                         } else {
-                          await _saveTransaction2(nameData["name"]);
+                          await _saveTransaction2(_particularController.text, nameData["id"]);
 
                           // Update the credit value directly here
                           setState(() async {
                             if(type == 0){
                               double newCredit = double.tryParse(_amountController.text) ?? 0.0;
                               nameData['credit'] = (nameData['credit'] ?? 0.0) + newCredit;
+                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
+
                             }else{
-                              await _saveTransaction2(nameData["name"]);
-                                                     Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
+                              await _saveTransaction2(_particularController.text,nameData["id"]);
+                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
                                                       // Refresh the UI
                             }
                           });
@@ -582,7 +587,7 @@ mytel(nameData,type){
                 onTap: () async {
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'])),
+                    MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'], id: nameData["id"])),
                   );
                   _loadNames();
                 },
@@ -601,7 +606,7 @@ mytel(nameData,type){
                             onPressed: () async {
                               await Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'])),
+                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'], id: nameData["id"],)),
                               );
                             },
                           ),
@@ -721,7 +726,7 @@ mytel(nameData,type){
                             onPressed: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData["name"],)),
+                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData["name"], id: nameData["id"],)),
                               );
                             },
                             style: TextButton.styleFrom(

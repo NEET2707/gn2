@@ -35,16 +35,16 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
     return Container(
       color: Colors.blueGrey.shade600,
       width: double.infinity,
-      padding: EdgeInsets.symmetric(vertical: 20.0),
+      padding: const EdgeInsets.symmetric(vertical: 20.0),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           // Profile Image (Optional)
           Container(
-            margin: EdgeInsets.only(top: 10.0),
+            margin: const EdgeInsets.only(top: 10.0),
             height: 70,
             width: 70, // Make sure the width and height are equal for a perfect circle
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
               image: DecorationImage(
                 image: AssetImage('assets/image/GN.png'),
@@ -53,12 +53,12 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
             ),
           ),
           // App Title
-          Text(
+          const Text(
             'Account Manager',
             style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
           ),
-          Divider(color: Colors.white70, thickness: 1.0, indent: 30, endIndent: 30),
-          SizedBox(height: 10),
+          const Divider(color: Colors.white70, thickness: 1.0, indent: 30, endIndent: 30),
+          const SizedBox(height: 10),
 
           // Credit, Debit, and Balance Display
           Padding(
@@ -68,7 +68,7 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
               children: [
                 _buildSummaryRow('Credit(+)', totalCredit, Colors.white),
                 _buildSummaryRow('Debit(-)', totalDebit, Colors.white),
-                Divider(color: Colors.white70),
+                const Divider(color: Colors.white70),
                 _buildSummaryRow('Balance', totalBalance, Colors.white, bold: true),
               ],
             ),
