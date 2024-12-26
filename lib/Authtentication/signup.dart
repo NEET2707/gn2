@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:gn_account_manager/Authtentication/login.dart';
 import 'package:gn_account_manager/Authtentication/users.dart';
+import 'package:gn_account_manager/dashboard.dart';
 import 'package:gn_account_manager/database_helper.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -15,10 +17,20 @@ class _SignupState extends State<Signup> {
   final password = TextEditingController();
   final confirmpassword = TextEditingController();
   bool isVisible = false;
-
   final formKey = GlobalKey<FormState>();
 
+  @override
+  void initState() {
+    super.initState();
+  }
 
+
+
+  Future<void> _setSignupStatus(String username) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('isSignedUp', true);
+    await prefs.setString('username', username); // Save username
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,64 +44,68 @@ class _SignupState extends State<Signup> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-
-                  ListTile(
-                    title: Text("Register New Account", style: TextStyle(fontSize: 45, fontWeight: FontWeight.bold),),
+                  Image.asset(
+                    "assets/image/omram.png",
+                    width: 350,
                   ),
+                  // Username input field
                   Container(
-                    margin:  EdgeInsets.all(8),
-                    padding:  EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    margin: EdgeInsets.all(8),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       color: Colors.deepPurple.withOpacity(.2),
                     ),
                     child: TextFormField(
                       controller: username,
-                      validator: (value){
-                        if(value!.isEmpty){
-                          return "username is required";
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return "Username is required";
                         }
                         return null;
                       },
-                      decoration:  InputDecoration(
+                      decoration: InputDecoration(
                         icon: Icon(Icons.person),
                         border: InputBorder.none,
                         hintText: "Username",
                       ),
                     ),
                   ),
-
+                  // Password input field
                   Container(
-                    margin:  EdgeInsets.all(8),
-                    padding:  EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    margin: EdgeInsets.all(8),
+                    padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(8),
                       color: Colors.deepPurple.withOpacity(.2),
                     ),
                     child: TextFormField(
                       controller: password,
-                      validator: (value){
-                        if(value!.isEmpty){
-                          return "password is required";
+                      validator: (value) {
+                        if (value!.isEmpty) {
+                          return "Password is required";
                         }
                         return null;
                       },
                       obscureText: !isVisible,
                       decoration: InputDecoration(
-                          icon: Icon(Icons.lock),
-                          border: InputBorder.none,
-                          hintText: "Password",
-                          suffixIcon: IconButton(onPressed: (){
+                        icon: Icon(Icons.lock),
+                        border: InputBorder.none,
+                        hintText: "Password",
+                        suffixIcon: IconButton(
+                          onPressed: () {
                             setState(() {
                               isVisible = !isVisible;
                             });
                           },
-                              icon: Icon(isVisible? Icons.visibility : Icons.visibility_off))
+                          icon: Icon(isVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off),
+                        ),
                       ),
                     ),
                   ),
-
-
+                  // Confirm Password input field
                   Container(
                     margin: EdgeInsets.all(8),
                     padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -101,7 +117,7 @@ class _SignupState extends State<Signup> {
                       controller: confirmpassword,
                       validator: (value) {
                         if (value!.isEmpty) {
-                          return "Password is required";
+                          return "Confirm Password is required";
                         } else if (password.text != confirmpassword.text) {
                           return "Passwords don't match";
                         }
@@ -118,16 +134,15 @@ class _SignupState extends State<Signup> {
                               isVisible = !isVisible;
                             });
                           },
-                          icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off),
+                          icon: Icon(isVisible
+                              ? Icons.visibility
+                              : Icons.visibility_off),
                         ),
                       ),
                     ),
                   ),
-
-
-                  SizedBox(height: 10,),
-
-                  //login
+                  SizedBox(height: 10),
+                  // Sign up button
                   Container(
                     height: 55,
                     width: MediaQuery.of(context).size.width * 8,
@@ -137,32 +152,37 @@ class _SignupState extends State<Signup> {
                     child: TextButton(
                       onPressed: () async {
                         if (formKey.currentState!.validate()) {
-                          // Calling the registerUser method to register the user
-
-
                           final db = AppDatabaseHelper();
-                          db.signup(Users(usrName: username.text, usrPassword: password.text))
-                              .whenComplete(() {
-                             Navigator.push(context, MaterialPageRoute(builder: (context) =>LoginScreen()));
-                          });
-                        }
-                      },
-                      child: Text("SIGN UP", style: TextStyle(color: Colors.white)),
+                          bool userExists = await db.doesUserExist(username.text);
+                          //
+                          if (userExists) {
+                          //   ScaffoldMessenger.of(context).showSnackBar(
+                          //       SnackBar(content: Text('Username already exists!')));
+                            db.login(Users(
+                                usrName: username.text, usrPassword: password.text))
+                                .whenComplete(() async {
+                              await _setSignupStatus(username.text); // Pass username
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(builder: (context) => Dashboard()),
+                              );
+                            }
+                            );
+                          }
+                          else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Not Exist')));
+                          }
+
+                          }
+                        },
+
+                      child:
+                      Text("Login ", style: TextStyle(color: Colors.white)),
                     ),
-
                   ),
+                  // Login redirect
 
-
-                  //sign up
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text("Already have an account?"),
-                      TextButton(onPressed: (){
-                        Navigator.push(context, MaterialPageRoute(builder: (context)=> LoginScreen()));
-                      }, child: Text("LOGIN"))
-                    ],
-                  )
                 ],
               ),
             ),

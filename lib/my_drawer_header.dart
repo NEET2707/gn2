@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'database_helper.dart';
 
 class MyHeaderDrawer extends StatefulWidget {
@@ -14,11 +15,13 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
   double totalCredit = 0.0;
   double totalDebit = 0.0;
   double totalBalance = 0.0;
+  String username = "Guest"; // Default username
 
   @override
   void initState() {
     super.initState();
     _fetchSummaryData();
+    _loadUsername(); // Load username from SharedPreferences
   }
 
   Future<void> _fetchSummaryData() async {
@@ -27,6 +30,13 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
       totalCredit = totals['totalCredit'] ?? 0.0;
       totalDebit = totals['totalDebit'] ?? 0.0;
       totalBalance = totals['totalBalance'] ?? 0.0;
+    });
+  }
+
+  Future<void> _loadUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      username = prefs.getString('username') ?? "Guest"; // Load username or fallback to "Guest"
     });
   }
 
@@ -39,27 +49,30 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
-          // Profile Image (Optional)
+          // Profile Image
           Container(
             margin: const EdgeInsets.only(top: 10.0),
             height: 70,
-            width: 70, // Make sure the width and height are equal for a perfect circle
+            width: 70,
             decoration: const BoxDecoration(
               shape: BoxShape.circle,
               image: DecorationImage(
                 image: AssetImage('assets/image/GN.png'),
-                fit: BoxFit.cover, // Ensures the image fills the circle while preserving aspect ratio
+                fit: BoxFit.cover,
               ),
             ),
           ),
-          // App Title
-          const Text(
-            'Account Manager',
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          // Dynamic Username
+          Text(
+            username,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const Divider(color: Colors.white70, thickness: 1.0, indent: 30, endIndent: 30),
           const SizedBox(height: 10),
-
           // Credit, Debit, and Balance Display
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0),
@@ -94,7 +107,7 @@ class _MyHeaderDrawerState extends State<MyHeaderDrawer> {
             ),
           ),
           Text(
-            '₹ ${value.toStringAsFixed(0)}', // No decimals as per the image
+            '₹ ${value.toStringAsFixed(0)}',
             style: TextStyle(
               color: bold ? Colors.white : color,
               fontSize: 18,

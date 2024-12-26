@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gn_account_manager/Authtentication/signup.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'my_drawer_header.dart';
 import 'database_helper.dart'; // Import the DatabaseHelper class
 import 'creditpage.dart';
@@ -410,6 +412,11 @@ class _DashboardState extends State<Dashboard> {
     );
 }
 
+  Future<void> _logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('isSignedUp');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -805,8 +812,8 @@ class _DashboardState extends State<Dashboard> {
               currentPage == DrawerSection.privacyPolicy ? true : false),
           menuItem(12, "More apps", Icons.more,
               currentPage == DrawerSection.moreApps ? true : false),
-          menuItem(13, "Ads Free", Icons.block,
-              currentPage == DrawerSection.adsFree ? true : false),
+          menuItem(13, "Log Out", Icons.logout,
+              currentPage == DrawerSection.logOut ? true : false),
         ],
       ),
     );
@@ -858,7 +865,9 @@ class _DashboardState extends State<Dashboard> {
                 currentPage = DrawerSection.moreApps;
                 break;
               case 13:
-                currentPage = DrawerSection.adsFree;
+                _logout();
+                // currentPage = DrawerSection.logOut;
+                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => Signup(),), (route) => false);
                 break;
             }
           });
@@ -903,5 +912,5 @@ enum DrawerSection {
   rateApp,
   privacyPolicy,
   moreApps,
-  adsFree,
+  logOut,
 }

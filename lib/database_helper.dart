@@ -211,6 +211,15 @@ class AppDatabaseHelper {
 
 //login page
 
+  // Check if username exists
+  Future<bool> doesUserExist(String username) async {
+    final db = await database;
+    var result = await db.rawQuery(
+        "SELECT * FROM users WHERE usrName = ?", [username]);
+    return result.isNotEmpty;
+  }
+
+
   Future<bool> login(Users user) async {
     final Database db = await database;
     var result = await db.rawQuery(
@@ -219,12 +228,19 @@ class AppDatabaseHelper {
   }
 
   // Signup Method
-  Future<int> signup(Users user) async {
-    final Database db = await database;
-    return db.insert('users', user.toMap());
-  }
-
-
+  // Future<String> signup(Users user) async {
+  //   final db = await database;
+  //
+  //   // Check if the username already exists
+  //   bool userExists = await doesUserExist(user.usrName);
+  //   if (userExists) {
+  //     return "Username already exists!";
+  //   } else {
+  //     // Insert new user if the username does not exist
+  //     await db.insert('users', user.toMap());
+  //     return "Signup successful!";
+  //   }
+  // }
 
   String users = "create table users (usrId INTEGER PRIMARY KEY AUTOINCREMENT, usrName Text UNIQUE, usrPassword Text)";
   Future<Database> initDB() async{
@@ -235,6 +251,7 @@ class AppDatabaseHelper {
       await db.execute(users);
     });
   }
+
 }
 
 
