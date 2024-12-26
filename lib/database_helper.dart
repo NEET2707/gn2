@@ -1,7 +1,6 @@
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
-import 'Authtentication/users.dart';
 
 class AppDatabaseHelper {
   static final AppDatabaseHelper _instance = AppDatabaseHelper._();
@@ -220,10 +219,10 @@ class AppDatabaseHelper {
   }
 
 
-  Future<bool> login(Users user) async {
+  Future<bool> login( user) async {
     final Database db = await database;
     var result = await db.rawQuery(
-        "SELECT * FROM users WHERE usrName = '${user.usrName}' AND usrPassword = '${user.usrPassword}'");
+        "SELECT * FROM users WHERE usrName = '${user.usrName}'");
     return result.isNotEmpty;
   }
 

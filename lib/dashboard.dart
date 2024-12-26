@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:gn_account_manager/Authtentication/signup.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:gn_account_manager/setpinscreen.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'my_drawer_header.dart';
 import 'database_helper.dart'; // Import the DatabaseHelper class
 import 'creditpage.dart';
@@ -11,6 +11,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'setpinscreen.dart';
 
 
 class Dashboard extends StatefulWidget {
@@ -22,12 +23,14 @@ class Dashboard extends StatefulWidget {
 
 
 class _DashboardState extends State<Dashboard> {
+  bool isToggled = false;
+
   var currentPage = DrawerSection.dashboard; // Define currentPage here
   final TextEditingController _nameController = TextEditingController();
   List<Map<String, dynamic>> namesList = []; // List to store both name and id
   List<Map<String, dynamic>> filteredNamesList = []; // List for filtered names
   final dbHelper = AppDatabaseHelper();
-
+  final FlutterSecureStorage storage = FlutterSecureStorage();
 
   TextEditingController _dateController = TextEditingController();
   TextEditingController _amountController = TextEditingController();
@@ -49,6 +52,19 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
+  void onToggleSwitch(bool value) {
+    setState(() {
+      isToggled = value;
+    });
+
+    if (value) {
+      // Navigate to another page when the switch is turned on
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => SetPinScreen()),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -295,7 +311,9 @@ class _DashboardState extends State<Dashboard> {
   }
 
 
-
+  Future<String?> _getPin() async {
+    return await storage.read(key: 'user_pin');
+  }
 
 
 
@@ -412,10 +430,6 @@ class _DashboardState extends State<Dashboard> {
     );
 }
 
-  Future<void> _logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('isSignedUp');
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -812,8 +826,14 @@ class _DashboardState extends State<Dashboard> {
               currentPage == DrawerSection.privacyPolicy ? true : false),
           menuItem(12, "More apps", Icons.more,
               currentPage == DrawerSection.moreApps ? true : false),
-          menuItem(13, "Log Out", Icons.logout,
-              currentPage == DrawerSection.logOut ? true : false),
+          ListTile(
+            leading: Icon(Icons.pin),
+              title: Text("Enter pin"),
+            trailing: Switch(
+            value: isToggled,
+            onChanged: onToggleSwitch,
+          ),
+          )
         ],
       ),
     );
@@ -864,11 +884,14 @@ class _DashboardState extends State<Dashboard> {
               case 12:
                 currentPage = DrawerSection.moreApps;
                 break;
-              case 13:
-                _logout();
-                // currentPage = DrawerSection.logOut;
-                Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => Signup(),), (route) => false);
-                break;
+              // case 13:
+              //   currentPage = DrawerSection.enablepin;
+              //   Navigator.push(
+              //     context,
+              //     MaterialPageRoute(builder: (context) => SetPinScreen()), // Navigate to Set PIN screen
+              //   );
+              //   break;
+
             }
           });
         },
@@ -913,4 +936,5 @@ enum DrawerSection {
   privacyPolicy,
   moreApps,
   logOut,
+  enablepin
 }
