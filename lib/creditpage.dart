@@ -5,7 +5,6 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
 import 'database_helper.dart';
-import 'searchresultpage.dart';
 import 'package:open_file/open_file.dart';
 
 class CreditPage extends StatefulWidget {

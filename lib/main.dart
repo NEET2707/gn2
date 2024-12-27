@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gn_account_manager/Authtentication/signup.dart';
 import 'pinverificationscreen.dart';
-import 'setpinscreen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gn_account_manager/setpinscreen.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'clientlistpage.dart';
 import 'my_drawer_header.dart';
 import 'database_helper.dart'; // Import the DatabaseHelper class
 import 'creditpage.dart';
@@ -11,8 +12,6 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'setpinscreen.dart';
-
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
@@ -24,6 +23,7 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> {
   bool isToggled = false;
+  late Future<List<Map<String, dynamic>>> _clientData;
 
   var currentPage = DrawerSection.dashboard; // Define currentPage here
   final TextEditingController _nameController = TextEditingController();
@@ -80,6 +80,7 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     _loadNames();
+    _clientData = AppDatabaseHelper().displayDataClient();
   }
 
   // Load names from the database
@@ -310,14 +311,6 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-
-  Future<String?> _getPin() async {
-    return await storage.read(key: 'user_pin');
-  }
-
-
-
-
   mytel(nameData,type){
     return   showDialog(
       context: context,
@@ -489,110 +482,25 @@ class _DashboardState extends State<Dashboard> {
 
       // Floating Action Button
       floatingActionButton: Material(
-        color: Colors.blueGrey.shade600, // Button color
-        shape: CircleBorder(), // Circular shape
-        elevation: 6.0, // Shadow/elevation
+        color: Colors.blueGrey.shade600,
+        shape: CircleBorder(),
+        elevation: 6.0,
         child: InkWell(
+
           onTap: () {
-            showDialog(
-              context: context,
-              builder: (context) {
-                return Dialog(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12.0),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min, // Wrap content vertically
-                      children: [
-                        // Dialog Title
-                        Container(
-                          padding: EdgeInsets.symmetric(vertical: 10),
-                          width: double.infinity,
-                          decoration: BoxDecoration(
-                            color: Color(0xFF5C9EAD),
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(12),
-                              topRight: Radius.circular(12),
-                            ),
-                          ),
-                          child: Center(
-                            child: Text(
-                              'Add new account',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(height: 16),
-
-                        // Input Field
-                        TextField(
-                          controller: _nameController, // Connect this controller
-                          decoration: InputDecoration(
-                            labelText: 'Account name',
-                            border: OutlineInputBorder(),
-                          ),
-                        ),
-                        SizedBox(height: 24),
-
-                        // Buttons Row
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            // Cancel Button
-                            TextButton(
-                              style: TextButton.styleFrom(
-                                side: BorderSide(color: Color(0xFF5C9EAD)),
-                              ),
-                              onPressed: () {
-                                Navigator.of(context).pop();
-                              },
-                              child: Text(
-                                'CANCEL',
-                                style: TextStyle(
-                                  color: Color(0xFF5C9EAD),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-
-                            // Save Button
-                            ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Color(0xFF5C9EAD),
-                              ),
-                              onPressed: () {
-                                _saveName();
-                                Navigator.of(context).pop();
-                              },
-                              child: Text(
-                                'SAVE',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
+            // Navigate to the new page
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => ClientListPage()),
             );
           },
           child: Padding(
-            padding: const EdgeInsets.all(16.0), // Adjust size
+            padding: const EdgeInsets.all(16.0),
             child: Icon(Icons.library_add, color: Colors.white),
           ),
         ),
       ),
+
 
       // Displaying the List of Names
       body: ListView.builder(

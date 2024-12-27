@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gn_account_manager/dashboard.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import '../pinverificationscreen.dart';
-import '../setpinscreen.dart';
 
 class Signup extends StatefulWidget {
   final String pincheck;

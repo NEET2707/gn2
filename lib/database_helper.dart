@@ -14,6 +14,17 @@ class AppDatabaseHelper {
   }
 
 
+
+
+  static const String TABLE_CLIENT = 'tblClient';
+  static const String KEY_ACCOUNT_ID = 'AccountId';
+  static const String KEY_CLIENT_NAME = 'ClientName';
+  static const String KEY_CLIENT_CODE = 'ClientCode';
+  static const String KEY_CLIENT_EMAIL_ID = 'EmailId';
+  static const String KEY_CONTACT_NO = 'ContactNo';
+  static const String KEY_CLIENT_ADDRESS = 'Address';
+  static const String KEY_DUE_BALANCE = 'DueBalance';
+
   Future<Database> get database async {
     if (_database != null) return _database!;
 
@@ -21,6 +32,8 @@ class AppDatabaseHelper {
 
     return _database!;
   }
+
+
 
   // Initialize the database and create tables
   // Removed initDB() method entirely
@@ -31,10 +44,7 @@ class AppDatabaseHelper {
       version: 1,
       onCreate: (db, version) async {
         // Create 'names' table
-        await db.execute('''CREATE TABLE names(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT
-          )''');
+
 
         // Create 'transactions' table
         await db.execute('''CREATE TABLE transactions(
@@ -47,6 +57,20 @@ class AppDatabaseHelper {
             FOREIGN KEY (name_id) REFERENCES names (id)
           )''');
 
+
+
+        await db.execute('''
+      CREATE TABLE $TABLE_CLIENT (
+        $KEY_ACCOUNT_ID INTEGER PRIMARY KEY,
+        $KEY_CLIENT_NAME TEXT,
+        $KEY_CLIENT_CODE TEXT,
+        $KEY_CLIENT_EMAIL_ID TEXT,
+        $KEY_CONTACT_NO TEXT,
+        $KEY_CLIENT_ADDRESS TEXT,
+        $KEY_DUE_BALANCE DOUBLE
+      )
+    ''');
+
         // Create 'users' table during database initialization
         await db.execute('''CREATE TABLE users(
             usrId INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -57,6 +81,88 @@ class AppDatabaseHelper {
     );
   }
 
+
+
+
+  /////////////////////////////////////////
+  // Insert client data into the database//
+  ////////////////////////////////////////
+
+
+  Future<int> insertClient({
+  required String clientName,
+  required String clientCode,
+  required String clientEmail,
+  required String contactNo,
+  required String clientAddress,
+  required double dueBalance,
+  }) async {
+  final db = await database;  // Get database instance
+
+  // Create the data to insert into the table
+  Map<String, dynamic> clientData = {
+  KEY_CLIENT_NAME: clientName,
+  KEY_CLIENT_CODE: clientCode,
+  KEY_CLIENT_EMAIL_ID: clientEmail,
+  KEY_CONTACT_NO: contactNo,
+  KEY_CLIENT_ADDRESS: clientAddress,
+  KEY_DUE_BALANCE: dueBalance,
+  };
+
+  // Insert the data into the table
+  return await db.insert(
+  TABLE_CLIENT,  // Table name
+  clientData,    // Data to insert
+  conflictAlgorithm: ConflictAlgorithm.replace,  // Handle conflicts
+  );
+  }
+
+
+  Future<List<Map<String, dynamic>>> displayDataClient() async {
+    final db = await database;
+    final result = await db.query(TABLE_CLIENT);
+    return result;
+  }
+
+
+
+  Future<int> updateClient({
+    required int accountId,
+    required String clientName,
+    required String clientCode,
+    required String clientEmail,
+    required String contactNo,
+    required String clientAddress,
+    required double dueBalance,
+  }) async {
+    final db = await database;
+
+    // Updating the client information
+    return await db.update(
+      AppDatabaseHelper.TABLE_CLIENT, // Replace with the correct table name
+      {
+        AppDatabaseHelper.KEY_CLIENT_NAME: clientName,
+        AppDatabaseHelper.KEY_CLIENT_CODE: clientCode,
+        AppDatabaseHelper.KEY_CLIENT_EMAIL_ID: clientEmail,
+        AppDatabaseHelper.KEY_CONTACT_NO: contactNo,
+        AppDatabaseHelper.KEY_CLIENT_ADDRESS: clientAddress,
+        AppDatabaseHelper.KEY_DUE_BALANCE: dueBalance,
+      },
+      where: '${AppDatabaseHelper.KEY_ACCOUNT_ID} = ?',
+      whereArgs: [accountId],
+    );
+  }
+
+  Future<int> deleteClient(int accountId) async {
+    final db = await database;
+
+    // Perform delete operation
+    return await db.delete(
+      AppDatabaseHelper.TABLE_CLIENT, // Replace with your table name
+      where: '${AppDatabaseHelper.KEY_ACCOUNT_ID} = ?', // Match the account ID
+      whereArgs: [accountId], // Pass the account ID as an argument
+    );
+  }
 
   // ==========================
   // NAMES TABLE METHODS
@@ -135,9 +241,6 @@ class AppDatabaseHelper {
     return result;
   }
 
-
-
-
   Future<List<Map<String, dynamic>>> getTransactionsByName(int id) async {
     final db = await database;
     return await db.query(
@@ -206,8 +309,6 @@ class AppDatabaseHelper {
     return {'totalCredit': 0.0, 'totalDebit': 0.0, 'totalBalance': 0.0};
   }
 
-
-
 //login page
 
   // Check if username exists
@@ -250,6 +351,10 @@ class AppDatabaseHelper {
       await db.execute(users);
     });
   }
+
+
+
+
 
 }
 
