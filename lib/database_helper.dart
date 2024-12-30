@@ -200,6 +200,16 @@ class AppDatabaseHelper {
 
   // Transaction Table Methods
 
+  // Function to count the records in the 'transaction' table for a specific client (accountId)
+  Future<int> countTransactions(int clientId) async {
+    final db = await instance.database;
+    final result = await db.rawQuery(
+      "SELECT COUNT(*) FROM $TABLE_TRANSACTION WHERE accountId = ?",
+      [clientId],  // Use the clientId parameter to filter the transactions
+    );
+    return Sqflite.firstIntValue(result) ?? 0;  // Return count or 0 if null
+  }
+
   Future<int> insertTransaction(Map<String, dynamic> transactionData) async {
     final db = await database;
     return await db.insert(

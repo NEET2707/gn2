@@ -440,12 +440,22 @@ class _CreditPageState extends State<CreditPage> {
     }
   }
 
+  late int transactionId;
+
   @override
   void initState() {
     super.initState();
-    transactions = AppDatabaseHelper.instance.getTransactionSummary();
-    // fetchAndCalculateTransactions();
+    _initData();
   }
+
+  void _initData() async {
+    // Wait for the count to be fetched asynchronously
+    transactionId = await AppDatabaseHelper.instance.countTransactions(widget.id);
+    transactions = (await AppDatabaseHelper.instance.getTransactionSummary()) as Future<List<Map<String, dynamic>>>;
+    // fetchAndCalculateTransactions();  // If you have additional logic
+    setState(() {}); // Call setState to update the UI after data is fetched
+  }
+
 
 
 
@@ -484,7 +494,7 @@ class _CreditPageState extends State<CreditPage> {
             onPressed: () {
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => TransactionPage(name: widget.name,id: widget.id,tid: 1,)),
+                MaterialPageRoute(builder: (context) => TransactionPage(name: widget.name,id: widget.id,tid: transactionId + 1,)),
               );
 
               // showDialog(
