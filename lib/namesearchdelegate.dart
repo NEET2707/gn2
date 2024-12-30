@@ -11,7 +11,8 @@ class SearchPage extends StatefulWidget {
 
 class _SearchPageState extends State<SearchPage> {
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> filteredNamesList = []; // List to store filtered names
+  List<Map<String, dynamic>> filteredNamesList =
+      []; // List to store filtered names
   final dbHelper = AppDatabaseHelper(); // Database helper instance
 
   @override
@@ -32,7 +33,7 @@ class _SearchPageState extends State<SearchPage> {
     setState(() {
       filteredNamesList = filteredNamesList
           .where((nameData) =>
-          nameData['name'].toLowerCase().contains(searchQuery))
+              nameData['name'].toLowerCase().contains(searchQuery))
           .toList();
     });
   }
@@ -61,9 +62,9 @@ class _SearchPageState extends State<SearchPage> {
               hintStyle: TextStyle(color: Colors.white),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                icon: Icon(Icons.clear, color: Colors.white),
-                onPressed: _clearSearch, // Clear search input
-              )
+                      icon: Icon(Icons.clear, color: Colors.white),
+                      onPressed: _clearSearch, // Clear search input
+                    )
                   : null, // Only show the clear button if there's text
             ),
             style: TextStyle(color: Colors.white),
@@ -80,27 +81,29 @@ class _SearchPageState extends State<SearchPage> {
               child: filteredNamesList.isEmpty
                   ? Center(child: Text('No records found'))
                   : ListView.builder(
-                itemCount: filteredNamesList.length,
-                itemBuilder: (context, index) {
-                  final nameData = filteredNamesList[index];
-                  return ListTile(
-                    contentPadding: EdgeInsets.symmetric(vertical: 10),
-                    title: Text(nameData['name']),
-                    trailing: IconButton(
-                      icon: Icon(Icons.arrow_forward),
-                      onPressed: () {
-                        // Navigate to credit page or desired action
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => CreditPage(name: nameData['name'], id: nameData["id"],),
+                      itemCount: filteredNamesList.length,
+                      itemBuilder: (context, index) {
+                        final nameData = filteredNamesList[index];
+                        return ListTile(
+                          contentPadding: EdgeInsets.symmetric(vertical: 10),
+                          title: Text(nameData['name']),
+                          trailing: IconButton(
+                            icon: Icon(Icons.arrow_forward),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CreditPage(
+                                    name: nameData['name'],
+                                    id: nameData["id"],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
                         );
                       },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

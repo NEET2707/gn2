@@ -5,8 +5,9 @@ import 'database_helper.dart';
 class TransactionPage extends StatefulWidget {
   final String name;
   final int id;
+  final int tid;
 
-  const TransactionPage({super.key, required this.name, required this.id});
+  const TransactionPage({super.key, required this.name, required this.id, required this.tid});
 
   @override
   _TransactionPageState createState() => _TransactionPageState();
@@ -38,11 +39,11 @@ class _TransactionPageState extends State<TransactionPage> {
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
-            _buildTextField(_transactionIdController, 'Transaction ID', TextInputType.number),
-            _buildTextField(_transactionDateController, 'Transaction Date', TextInputType.text, isDate: true),
-            _buildTextField(_totalAmountController, 'Total Amount', TextInputType.numberWithOptions(decimal: true)),
+            _buildTextField(_transactionIdController, TextInputType.number, tid: widget.tid),
+            _buildTextField(_transactionDateController, TextInputType.text, label: 'Transaction Date', isDate: true),
+            _buildTextField(_totalAmountController, TextInputType.numberWithOptions(decimal: true), label: 'Total Amount'),
             _buildCheckbox('Is Credit', _isCreditController),
-            _buildTextField(_noteController, 'Note', TextInputType.text),
+            _buildTextField(_noteController, TextInputType.text,  label: 'Note'),
 
             SizedBox(height: 24),
             _buildSubmitButton(),
@@ -53,14 +54,15 @@ class _TransactionPageState extends State<TransactionPage> {
   }
 
   // Custom function to build text fields
-  Widget _buildTextField(TextEditingController controller, String label, TextInputType keyboardType, {bool isDate = false}) {
+  Widget _buildTextField(TextEditingController controller, TextInputType keyboardType, {String? label, bool isDate = false, int? tid}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         decoration: InputDecoration(
-          labelText: label,
+          labelText: tid?.toString() ?? label,
+          enabled: tid != null ? false : true,
           border: OutlineInputBorder(),
           filled: true,
           fillColor: Colors.white,
@@ -110,7 +112,7 @@ class _TransactionPageState extends State<TransactionPage> {
       onPressed: () async {
         // Collect the data
         Map<String, dynamic> transactionData = {
-          'TransactionId': _transactionIdController.text,
+          'TransactionId': widget.tid,
           'TransactionDate': _transactionDateController.text,
           'InvoiceNo': 0,
           'AccountId': widget.id,
@@ -146,7 +148,7 @@ class _TransactionPageState extends State<TransactionPage> {
         _noteController.clear();
         _currentDueController.clear();
 
-        Navigator.push(
+        Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => CreditPage(name: widget.name, id: widget.id)),
         );

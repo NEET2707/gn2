@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gn_account_manager/dashboard.dart';
+import 'package:gn_account_manager/clientscreen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 

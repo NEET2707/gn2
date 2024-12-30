@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:gn_account_manager/dashboard.dart';
+import 'package:gn_account_manager/clientscreen.dart';
 
 import 'database_helper.dart';
 
@@ -110,7 +110,8 @@ class _ClientListPageState extends State<ClientListPage> {
                             _contactNoController.text= "";
                             _clientAddressController.text= "";
                             _dueBalanceController.text = "";
-                            Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => Dashboard(),), (Route<dynamic> route) => false,);
+                            Navigator.pop(context);
+                            // Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context) => Dashboard(),), (Route<dynamic> route) => false,);
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(content: Text('Failed to Add Client')),
@@ -136,176 +137,176 @@ class _ClientListPageState extends State<ClientListPage> {
                 ),
               ),
 
-              const SizedBox(height: 20),
-
-              // Client List Section
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: _clientData,
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  } else if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return Center(child: Text('No clients found.'));
-                  } else {
-                    var clientData = snapshot.data!;
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      physics: NeverScrollableScrollPhysics(),
-                      itemCount: clientData.length,
-                      itemBuilder: (context, index) {
-                        var client = clientData[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10.0),
-                          ),
-                          elevation: 3,
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      'Account ID: ${client['AccountId']}',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    Row(
-                                      children: [
-                                        IconButton(
-                                          icon: Icon(Icons.edit, color: Colors.blue),
-                                          onPressed: () {
-                                            _clientNameController.text = client['ClientName'];
-                                            _clientCodeController.text = client['ClientCode'];
-                                            _clientEmailController.text = client['EmailId'];
-                                            _contactNoController.text = client['ContactNo'];
-                                            _clientAddressController.text = client['Address'];
-                                            _dueBalanceController.text = client['DueBalance'].toString();
-
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: Text('Edit Client'),
-                                                content: SingleChildScrollView(
-                                                  child: Column(
-                                                    children: [
-                                                      _buildInputField('First Name', _clientNameController),
-                                                      _buildInputField('Client Code', _clientCodeController),
-                                                      _buildInputField('Email Address', _clientEmailController),
-                                                      _buildInputField('Contact Number', _contactNoController),
-                                                      _buildInputField('Address', _clientAddressController),
-                                                      _buildInputField('Due Balance', _dueBalanceController, keyboardType: TextInputType.number),
-                                                    ],
-                                                  ),
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(context),
-                                                    child: Text('Cancel'),
-                                                  ),
-                                                  ElevatedButton(
-                                                    onPressed: () async {
-                                                      String clientName = _clientNameController.text;
-                                                      String clientCode = _clientCodeController.text;
-                                                      String clientEmail = _clientEmailController.text;
-                                                      String contactNo = _contactNoController.text;
-                                                      String clientAddress = _clientAddressController.text;
-                                                      double dueBalance = double.tryParse(_dueBalanceController.text) ?? 0.0;
-
-                                                      int result = await AppDatabaseHelper.instance.updateClient(
-                                                        accountId: client['AccountId'],
-                                                        clientName: clientName,
-                                                        clientCode: clientCode,
-                                                        clientEmail: clientEmail,
-                                                        contactNo: contactNo,
-                                                        clientAddress: clientAddress,
-                                                        dueBalance: dueBalance,
-                                                      );
-
-                                                      if (result > 0) {
-                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text('Client Updated Successfully!')),
-                                                        );
-                                                        setState(() {
-                                                          _clientData = AppDatabaseHelper().displayDataClient();
-                                                        });
-                                                        Navigator.pop(context);
-                                                      } else {
-                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text('Failed to Update Client')),
-                                                        );
-                                                      }
-                                                    },
-                                                    child: Text('Save'),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                        IconButton(
-                                          icon: Icon(Icons.delete, color: Colors.red),
-                                          onPressed: () {
-                                            showDialog(
-                                              context: context,
-                                              builder: (context) => AlertDialog(
-                                                title: Text('Confirm Deletion'),
-                                                content: Text('Are you sure you want to delete this client?'),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(context),
-                                                    child: Text('Cancel'),
-                                                  ),
-                                                  ElevatedButton(
-                                                    onPressed: () async {
-                                                      int result = await AppDatabaseHelper.instance.deleteClient(client['AccountId']);
-
-                                                      if (result > 0) {
-                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text('Client Deleted Successfully!')),
-                                                        );
-                                                        setState(() {
-                                                          _clientData = AppDatabaseHelper().displayDataClient();
-                                                        });
-                                                        Navigator.pop(context);
-                                                      } else {
-                                                        ScaffoldMessenger.of(context).showSnackBar(
-                                                          SnackBar(content: Text('Failed to Delete Client')),
-                                                        );
-                                                      }
-                                                    },
-                                                    child: Text('Delete'),
-                                                    style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          },
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 8),
-                                Text('Name: ${client['ClientName']}'),
-                                Text('Code: ${client['ClientCode']}'),
-                                Text('Email: ${client['EmailId']}'),
-                                Text('Contact No: ${client['ContactNo']}'),
-                                Text('Address: ${client['Address']}'),
-                                Text('Due Balance: ${client['DueBalance']}'),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  }
-                },
-              ),
+              // const SizedBox(height: 20),
+              //
+              // // Client List Section
+              // FutureBuilder<List<Map<String, dynamic>>>(
+              //   future: _clientData,
+              //   builder: (context, snapshot) {
+              //     if (snapshot.connectionState == ConnectionState.waiting) {
+              //       return Center(child: CircularProgressIndicator());
+              //     } else if (snapshot.hasError) {
+              //       return Center(child: Text('Error: ${snapshot.error}'));
+              //     } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+              //       return Center(child: Text('No clients found.'));
+              //     } else {
+              //       var clientData = snapshot.data!;
+              //       return ListView.builder(
+              //         shrinkWrap: true,
+              //         physics: NeverScrollableScrollPhysics(),
+              //         itemCount: clientData.length,
+              //         itemBuilder: (context, index) {
+              //           var client = clientData[index];
+              //           return Card(
+              //             margin: const EdgeInsets.symmetric(vertical: 8.0),
+              //             shape: RoundedRectangleBorder(
+              //               borderRadius: BorderRadius.circular(10.0),
+              //             ),
+              //             elevation: 3,
+              //             child: Padding(
+              //               padding: const EdgeInsets.all(16.0),
+              //               child: Column(
+              //                 crossAxisAlignment: CrossAxisAlignment.start,
+              //                 children: [
+              //                   Row(
+              //                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              //                     children: [
+              //                       Text(
+              //                         'Account ID: ${client['AccountId']}',
+              //                         style: TextStyle(fontWeight: FontWeight.bold),
+              //                       ),
+              //                       Row(
+              //                         children: [
+              //                           IconButton(
+              //                             icon: Icon(Icons.edit, color: Colors.blue),
+              //                             onPressed: () {
+              //                               _clientNameController.text = client['ClientName'];
+              //                               _clientCodeController.text = client['ClientCode'];
+              //                               _clientEmailController.text = client['EmailId'];
+              //                               _contactNoController.text = client['ContactNo'];
+              //                               _clientAddressController.text = client['Address'];
+              //                               _dueBalanceController.text = client['DueBalance'].toString();
+              //
+              //                               showDialog(
+              //                                 context: context,
+              //                                 builder: (context) => AlertDialog(
+              //                                   title: Text('Edit Client'),
+              //                                   content: SingleChildScrollView(
+              //                                     child: Column(
+              //                                       children: [
+              //                                         _buildInputField('First Name', _clientNameController),
+              //                                         _buildInputField('Client Code', _clientCodeController),
+              //                                         _buildInputField('Email Address', _clientEmailController),
+              //                                         _buildInputField('Contact Number', _contactNoController),
+              //                                         _buildInputField('Address', _clientAddressController),
+              //                                         _buildInputField('Due Balance', _dueBalanceController, keyboardType: TextInputType.number),
+              //                                       ],
+              //                                     ),
+              //                                   ),
+              //                                   actions: [
+              //                                     TextButton(
+              //                                       onPressed: () => Navigator.pop(context),
+              //                                       child: Text('Cancel'),
+              //                                     ),
+              //                                     ElevatedButton(
+              //                                       onPressed: () async {
+              //                                         String clientName = _clientNameController.text;
+              //                                         String clientCode = _clientCodeController.text;
+              //                                         String clientEmail = _clientEmailController.text;
+              //                                         String contactNo = _contactNoController.text;
+              //                                         String clientAddress = _clientAddressController.text;
+              //                                         double dueBalance = double.tryParse(_dueBalanceController.text) ?? 0.0;
+              //
+              //                                         int result = await AppDatabaseHelper.instance.updateClient(
+              //                                           accountId: client['AccountId'],
+              //                                           clientName: clientName,
+              //                                           clientCode: clientCode,
+              //                                           clientEmail: clientEmail,
+              //                                           contactNo: contactNo,
+              //                                           clientAddress: clientAddress,
+              //                                           dueBalance: dueBalance,
+              //                                         );
+              //
+              //                                         if (result > 0) {
+              //                                           ScaffoldMessenger.of(context).showSnackBar(
+              //                                             SnackBar(content: Text('Client Updated Successfully!')),
+              //                                           );
+              //                                           setState(() {
+              //                                             _clientData = AppDatabaseHelper().displayDataClient();
+              //                                           });
+              //                                           Navigator.pop(context);
+              //                                         } else {
+              //                                           ScaffoldMessenger.of(context).showSnackBar(
+              //                                             SnackBar(content: Text('Failed to Update Client')),
+              //                                           );
+              //                                         }
+              //                                       },
+              //                                       child: Text('Save'),
+              //                                     ),
+              //                                   ],
+              //                                 ),
+              //                               );
+              //                             },
+              //                           ),
+              //                           IconButton(
+              //                             icon: Icon(Icons.delete, color: Colors.red),
+              //                             onPressed: () {
+              //                               showDialog(
+              //                                 context: context,
+              //                                 builder: (context) => AlertDialog(
+              //                                   title: Text('Confirm Deletion'),
+              //                                   content: Text('Are you sure you want to delete this client?'),
+              //                                   actions: [
+              //                                     TextButton(
+              //                                       onPressed: () => Navigator.pop(context),
+              //                                       child: Text('Cancel'),
+              //                                     ),
+              //                                     ElevatedButton(
+              //                                       onPressed: () async {
+              //                                         int result = await AppDatabaseHelper.instance.deleteClient(client['AccountId']);
+              //
+              //                                         if (result > 0) {
+              //                                           ScaffoldMessenger.of(context).showSnackBar(
+              //                                             SnackBar(content: Text('Client Deleted Successfully!')),
+              //                                           );
+              //                                           setState(() {
+              //                                             _clientData = AppDatabaseHelper().displayDataClient();
+              //                                           });
+              //                                           Navigator.pop(context);
+              //                                         } else {
+              //                                           ScaffoldMessenger.of(context).showSnackBar(
+              //                                             SnackBar(content: Text('Failed to Delete Client')),
+              //                                           );
+              //                                         }
+              //                                       },
+              //                                       child: Text('Delete'),
+              //                                       style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              //                                     ),
+              //                                   ],
+              //                                 ),
+              //                               );
+              //                             },
+              //                           ),
+              //                         ],
+              //                       ),
+              //                     ],
+              //                   ),
+              //                   SizedBox(height: 8),
+              //                   Text('Name: ${client['ClientName']}'),
+              //                   Text('Code: ${client['ClientCode']}'),
+              //                   Text('Email: ${client['EmailId']}'),
+              //                   Text('Contact No: ${client['ContactNo']}'),
+              //                   Text('Address: ${client['Address']}'),
+              //                   Text('Due Balance: ${client['DueBalance']}'),
+              //                 ],
+              //               ),
+              //             ),
+              //           );
+              //         },
+              //       );
+              //     }
+              //   },
+              // ),
             ],
           ),
         ),

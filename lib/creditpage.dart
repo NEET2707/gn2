@@ -46,7 +46,6 @@ class _CreditPageState extends State<CreditPage> {
   }
 
 
-
   double calculateTotalCredit(List<Map<String, dynamic>> transactions) {
     double totalCredit = 0.0;
     for (var tx in transactions) {
@@ -483,9 +482,9 @@ class _CreditPageState extends State<CreditPage> {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
-              Navigator.push(
+              Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (context) => TransactionPage(name: widget.name,id: widget.id,)),
+                MaterialPageRoute(builder: (context) => TransactionPage(name: widget.name,id: widget.id,tid: 1,)),
               );
 
               // showDialog(

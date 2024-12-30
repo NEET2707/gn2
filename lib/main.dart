@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gn_account_manager/Authtentication/signup.dart';
-import 'package:gn_account_manager/dashboard.dart';
+import 'package:gn_account_manager/clientscreen.dart';
 import 'package:gn_account_manager/setpinscreen.dart';
+import 'mainscreen.dart';
 import 'pinverificationscreen.dart';
 
 void main() async {
@@ -24,9 +25,9 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Account Manager',
+      title: 'Cash Book',
       debugShowCheckedModeBanner: false,
-      home:Dashboard()
+      home:MainScreen()
       // storedPin == null ? Signup(pincheck: storedPin.toString()) : PinVerificationScreen()
       // storedPin == null ? SetPinScreen() : PinVerificationScreen(),
     );

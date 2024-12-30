@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'dashboard.dart';  // Replace with your actual dashboard screen.
+import 'clientscreen.dart';  // Replace with your actual dashboard screen.
 
 class PinVerificationScreen extends StatefulWidget {
   @override

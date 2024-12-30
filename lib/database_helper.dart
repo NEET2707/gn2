@@ -1,3 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
@@ -6,9 +11,6 @@ class AppDatabaseHelper {
   static Database? _database;
 
   AppDatabaseHelper._();
-
-
-
 
   static AppDatabaseHelper get instance => _instance;
   factory AppDatabaseHelper() {
@@ -86,8 +88,6 @@ class AppDatabaseHelper {
     );
   }
 
-
-
   Future<List<Map<String, dynamic>>> getTransactionSummary() async {
     final db = await database;
     List<Map<String, dynamic>> transactions = await db.rawQuery('''
@@ -106,16 +106,17 @@ class AppDatabaseHelper {
   FROM $TABLE_TRANSACTION
 ''');
 
-    print("Fetched Transactions: $transactions");  // Check the fetched data here
+    print("Fetched Transactions: $transactions"); // Check the fetched data here
     return transactions;
   }
 
-
   void displayTransactionSummaryOnCreditPage() async {
     final dbHelper = AppDatabaseHelper.instance;
-    List<Map<String, dynamic>> transactions = await dbHelper.getTransactionSummary();
+    List<Map<String, dynamic>> transactions =
+        await dbHelper.getTransactionSummary();
 
-    print("Transactions count: ${transactions.length}");  // Log number of transactions
+    print(
+        "Transactions count: ${transactions.length}"); // Log number of transactions
 
     if (transactions.isEmpty) {
       print('No transactions to display.');
@@ -133,11 +134,6 @@ class AppDatabaseHelper {
       }
     }
   }
-
-
-
-
-  // Client Table Methods
 
   Future<int> insertClient({
     required String clientName,
@@ -218,7 +214,8 @@ class AppDatabaseHelper {
     return await db.query(TABLE_TRANSACTION);
   }
 
-  Future<List<Map<String, dynamic>>> getTransactionsByDate(String accountName, String date) async {
+  Future<List<Map<String, dynamic>>> getTransactionsByDate(
+      String accountName, String date) async {
     final db = await database;
     return await db.query(
       TABLE_TRANSACTION,
@@ -237,7 +234,8 @@ class AppDatabaseHelper {
     ''', [accountName, startDate, endDate]);
   }
 
-  Future<List<Map<String, dynamic>>> getTransactionsByAccountId(int accountId) async {
+  Future<List<Map<String, dynamic>>> getTransactionsByAccountId(
+      int accountId) async {
     final db = await database;
     return await db.query(
       TABLE_TRANSACTION,
@@ -256,7 +254,33 @@ class AppDatabaseHelper {
     ''');
 
     if (result.isNotEmpty) {
-      double totalCredit = (result[0]['totalCredit'] as num?)?.toDouble() ?? 0.0;
+      double totalCredit =
+          (result[0]['totalCredit'] as num?)?.toDouble() ?? 0.0;
+      double totalDebit = (result[0]['totalDebit'] as num?)?.toDouble() ?? 0.0;
+      double totalBalance = totalCredit - totalDebit;
+
+      return {
+        'totalCredit': totalCredit,
+        'totalDebit': totalDebit,
+        'totalBalance': totalBalance
+      };
+    }
+
+    return {'totalCredit': 0.0, 'totalDebit': 0.0, 'totalBalance': 0.0};
+  }
+
+  Future<Map<String, double>> getTotalCreditDebitBalanceId(int id) async {
+    final db = await database;
+    final result = await db.rawQuery('''
+      SELECT 
+        SUM(CASE WHEN $KEY_IS_CREDIT = 1 THEN $KEY_TOTAL_AMOUNT ELSE 0 END) AS totalCredit,
+        SUM(CASE WHEN $KEY_IS_CREDIT = 0 THEN $KEY_TOTAL_AMOUNT ELSE 0 END) AS totalDebit
+      FROM $TABLE_TRANSACTION WHERE $KEY_ACCOUNT_ID = ?
+    ''', [id]);
+
+    if (result.isNotEmpty) {
+      double totalCredit =
+          (result[0]['totalCredit'] as num?)?.toDouble() ?? 0.0;
       double totalDebit = (result[0]['totalDebit'] as num?)?.toDouble() ?? 0.0;
       double totalBalance = totalCredit - totalDebit;
 
@@ -278,7 +302,8 @@ class AppDatabaseHelper {
     List<Map<String, dynamic>> updatedList = [];
 
     for (var clientData in clients) {
-      final transactions = await getTransactionsByAccountId(int.parse(clientData[KEY_ACCOUNT_ID].toString()));
+      final transactions = await getTransactionsByAccountId(
+          int.parse(clientData[KEY_ACCOUNT_ID].toString()));
 
       double credit = 0.0;
       double debit = 0.0;
@@ -307,8 +332,8 @@ class AppDatabaseHelper {
 
   Future<bool> doesUserExist(String username) async {
     final db = await database;
-    var result = await db.rawQuery(
-        "SELECT * FROM users WHERE usrName = ?", [username]);
+    var result =
+        await db.rawQuery("SELECT * FROM users WHERE usrName = ?", [username]);
     return result.isNotEmpty;
   }
 
@@ -331,4 +356,150 @@ class AppDatabaseHelper {
       conflictAlgorithm: ConflictAlgorithm.ignore,
     );
   }
+
+  Future<File?> pickCsvFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        return File(result.files.single.path!);
+      }
+    } catch (e) {
+      print('Error picking file: $e');
+    }
+
+    return null;
+  }
+
+  Future<void> processClientDataString(String dataString) async {
+    try {
+      // Remove header and split rows
+      final rows = const LineSplitter().convert(dataString).skip(1);
+
+      for (var row in rows) {
+        // Parse each row
+        final values = row.split(',');
+
+        if (values.length >= 7) {
+          final clientName = values[1].replaceAll('"', '').trim();
+          final clientCode = values[2].replaceAll('"', '').trim() == 'null'
+              ? 'N/A'
+              : values[2].replaceAll('"', '').trim();
+          final clientEmail = values[3].replaceAll('"', '').trim();
+          final contactNo = values[4].replaceAll('"', '').trim();
+          final clientAddress = values[5].replaceAll('"', '').trim().isEmpty
+              ? 'Unknown Address'
+              : values[5].replaceAll('"', '').trim();
+          final dueBalance =
+              double.tryParse(values[6].replaceAll('"', '').trim()) ?? 0.0;
+
+          // Insert into the database
+          await insertClient(
+            clientName: clientName,
+            clientCode: clientCode,
+            clientEmail: clientEmail,
+            contactNo: contactNo,
+            clientAddress: clientAddress,
+            dueBalance: dueBalance,
+          );
+        }
+      }
+
+      print('Data inserted successfully.');
+    } catch (e) {
+      print('Error processing data string: $e');
+    }
+  }
+
+  Future<void> importClientsFromCsv(File csvFile) async {
+    try {
+      final csvString = await csvFile.readAsString();
+      List<List<dynamic>> csvData =
+          const CsvToListConverter().convert(csvString);
+      processClientDataString(csvString);
+      // for (var i = 1; i < csvData.length; i++) {
+      //   final row = csvData[i];
+
+      // final clientName = row[0].toString();
+      // final clientCode = row[1].toString();
+      // final clientEmail = row[2].toString();
+      // final contactNo = row[3].toString();
+      // final clientAddress = row[4].toString();
+      // final dueBalance = double.tryParse(row[5].toString()) ?? 0.0;
+
+      // await insertClient(
+      //   clientName: clientName,
+      //   clientCode: clientCode,
+      //   clientEmail: clientEmail,
+      //   contactNo: contactNo,
+      //   clientAddress: clientAddress,
+      //   dueBalance: dueBalance,
+      // );
+      // }
+
+      print('CSV data imported successfully.');
+    } catch (e) {
+      print('Error importing CSV data: $e');
+    }
+  }
+
+  Future<void> importTransactionsFromCsv(File csvFile) async {
+    try {
+      final csvString = await csvFile.readAsString();
+      await processTransactionDataString(csvString);
+
+      print('Transactions imported successfully.');
+    } catch (e) {
+      print('Error importing transactions from CSV: $e');
+    }
+  }
+
+  Future<void> processTransactionDataString(String dataString) async {
+    try {
+      final rows = const LineSplitter().convert(dataString).skip(1);
+
+      for (var row in rows) {
+        final values = row.split(',');
+
+        if (values.length >= 10) {
+          final transactionDate = values[1].replaceAll('"', '').trim();
+          final accountId = values[3].replaceAll('"', '').trim();
+          final accountName = values[4].replaceAll('"', '').trim();
+          final totalAmount =
+              double.tryParse(values[6].replaceAll('"', '').trim()) ?? 0.0;
+          final creditDebit = values[7].replaceAll('"', '').trim();
+          final transactionId = values[0].replaceAll('"', '').trim();
+          final invoiceNo = values[2].replaceAll('"', '').trim();
+          final discount =
+              double.tryParse(values[5].replaceAll('"', '').trim()) ?? 0.0;
+          final isReminder = values[8].replaceAll('"', '').trim();
+          final note = values[9].replaceAll('"', '').trim();
+
+          // Insert into the database
+          await insertTransaction({
+            'TransactionId': transactionId,
+            'InvoiceNo': invoiceNo,
+            'AccountName': accountName,
+            'Discount': discount,
+            'IsReminder': isReminder,
+            'Note': note,
+            'TransactionDate': transactionDate,
+            'IsCredit': creditDebit,
+            'TotalAmount': totalAmount,
+            'AccountId': accountId,
+          });
+        }
+      }
+
+      print('Transaction data inserted successfully.');
+    } catch (e) {
+      print('Error processing transaction data string: $e');
+    }
+  }
 }
+
+
+

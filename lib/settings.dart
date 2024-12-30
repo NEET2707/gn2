@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:gn_account_manager/setpinscreen.dart';
 import 'package:gn_account_manager/home.dart';
-import 'dashboard.dart';
+import 'clientscreen.dart';
 
 class SettingsPage extends StatefulWidget {
   @override
@@ -28,15 +28,17 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text(
           "Settings",
           style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.blueGrey.shade800,
-        iconTheme: const IconThemeData(color: Colors.white), // Set icon color to white
-        foregroundColor: Colors.white, // Ensures all foreground elements are white
+        iconTheme:
+            const IconThemeData(color: Colors.white), // Set icon color to white
+        foregroundColor:
+            Colors.white, // Ensures all foreground elements are white
       ),
-
       body: ListView(
         padding: const EdgeInsets.all(16.0),
         children: [
@@ -134,52 +136,17 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-            if (index == 0) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => HomeScreen()),
-              );
-            } else if (index == 1) {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (context) => Dashboard()),
-              );
-            } else if (index == 2) {
-              // Stay on settings
-            }
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-      ),
     );
   }
 
   Widget _buildSettingCard(
-      BuildContext context, {
-        required String title,
-        required String subtitle,
-        required IconData leadingIcon,
-        Widget? trailingWidget,
-        VoidCallback? onTap,
-      }) {
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData leadingIcon,
+    Widget? trailingWidget,
+    VoidCallback? onTap,
+  }) {
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12.0),

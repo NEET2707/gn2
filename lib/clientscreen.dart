@@ -1,6 +1,9 @@
+import 'dart:math';
+
+import 'package:csv/csv.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:gn_account_manager/edit.dart';
 import 'package:gn_account_manager/setpinscreen.dart';
 import 'package:gn_account_manager/settings.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -24,7 +27,7 @@ class Dashboard extends StatefulWidget {
 
 class _DashboardState extends State<Dashboard> {
   bool isToggled = false;
-  late Future<List<Map<String, dynamic>>> _clientData;
+  // late Future<List<Map<String, dynamic>>> _clientData;
 
   // var currentPage = DrawerSection.dashboard; // Define currentPage here
   final TextEditingController _nameController = TextEditingController();
@@ -78,9 +81,9 @@ class _DashboardState extends State<Dashboard> {
   @override
   void initState() {
     super.initState();
-    _fetchDashboardData();
+    // _fetchDashboardData();
     _loadNames();
-    _clientData = AppDatabaseHelper().displayDataClient();
+    // _clientData = AppDatabaseHelper().displayDataClient();
   }
 
   double totalCredit = 0.0;
@@ -395,7 +398,12 @@ class _DashboardState extends State<Dashboard> {
                             }
                           });
 
-
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Dashboard(),
+                            ),
+                          );
                         }
                       },
                       child: Text('Save Transaction'),
@@ -409,6 +417,10 @@ class _DashboardState extends State<Dashboard> {
       },
     );
   }
+
+
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -426,6 +438,14 @@ class _DashboardState extends State<Dashboard> {
         ),
         backgroundColor: Colors.blueGrey.shade600,
         actions: [
+          IconButton(
+            icon: Icon(Icons.download_outlined, color: Colors.white),
+            onPressed: () async {
+             File? pixkfile = await AppDatabaseHelper().pickCsvFile();
+             if(pixkfile != null)
+             AppDatabaseHelper().importClientsFromCsv(pixkfile);
+            },
+          ),
           IconButton(
             icon: Icon(Icons.search, color: Colors.white),
             onPressed: () {
@@ -453,280 +473,246 @@ class _DashboardState extends State<Dashboard> {
           ),
         ],
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _clientData, // Fetch client data from your database
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          } else {
-            // Combine both datasets (client data and other data if needed)
-            var combinedData = [
-              ...(snapshot.data ?? [])
-                  .map((item) => {'type': 'client', ...item})
-                  .toList(),
-            ];
+      body: RefreshIndicator(
+        onRefresh: () {
+          return _loadNames();
+        },
+        child: ListView.builder(
+          itemCount: namesList.length,
+          itemBuilder: (context, index) {
 
-            if (combinedData.isEmpty) {
-              return Center(child: Text('No data available.'));
-            }
-
-            return ListView.builder(
-              itemCount: combinedData.length,
-              itemBuilder: (context, index) {
-                final data = combinedData[index];
-
-                if (data['type'] == 'client') {
-                  return InkWell(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => CreditPage(
-                              name: data['ClientName'], id: data['AccountId']),
-                        ),
-                      );
-                    },
-                    child: Card(
-                      margin: const EdgeInsets.symmetric(vertical: 8.0),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10.0),
-                      ),
-                      elevation: 3,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Account ID: ${data['AccountId']}',
-                                  style: TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                Row(
-                                  children: [
-                                    IconButton(
-                                      icon:
-                                          Icon(Icons.edit, color: Colors.blue),
-                                      onPressed: () {
-                                        Navigator.push(context, MaterialPageRoute(builder: (context) => editpage(),));
-                                      },
-                                    ),
-                                    IconButton(
-                                      icon: Icon(Icons.delete, color: Colors.red),
-                                      onPressed: () {
-                                        showDialog(
-                                          context: context,
-                                          builder: (context) => AlertDialog(
-                                            title: Text('Confirm Deletion'),
-                                            content: Text(
-                                                'Are you sure you want to delete this client?'),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: Text('Cancel'),
-                                              ),
-                                              ElevatedButton(
-                                                onPressed: () async {
-                                                  int result =
-                                                      await AppDatabaseHelper
-                                                          .instance
-                                                          .deleteClient(data[
-                                                              'AccountId']);
-
-                                                  if (result > 0) {
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                          content: Text(
-                                                              'Client Deleted Successfully!')),
-                                                    );
-                                                    setState(() {
-                                                      _clientData =
-                                                          AppDatabaseHelper()
-                                                              .displayDataClient();
-                                                    });
-                                                    Navigator.pop(context);
-                                                  } else {
-                                                    ScaffoldMessenger.of(
-                                                            context)
-                                                        .showSnackBar(
-                                                      SnackBar(
-                                                          content: Text(
-                                                              'Failed to Delete Client')),
-                                                    );
-                                                  }
-                                                },
-                                                child: Text('Delete'),
-                                                style: ElevatedButton.styleFrom(
-                                                    backgroundColor:
-                                                        Colors.red),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                            Text('Name: ${data['ClientName']}'),
-                            Text('Code: ${data['ClientCode']}'),
-                            Text('Email: ${data['EmailId']}'),
-                            Text('Contact No: ${data['ContactNo']}'),
-                            Text('Address: ${data['Address']}'),
-                            Text('Due Balance: ${data['DueBalance']}'),
-                            Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _buildSummaryCard(
-                                    'Credit(+)',
-                                    totalCredit,
-                                    Colors.green.withOpacity(0.5),
-                                  ),
-                                  _buildSummaryCard(
-                                    'Debit(-)',
-                                    totalDebit,
-                                    Colors.red.withOpacity(0.5),
-                                  ),
-                                  _buildSummaryCard(
-                                    'Balance',
-                                    totalBalance,
-                                    Colors.blue.withOpacity(0.5),
-                                  ),
-                                ],
-
-                                // children: [
-                                //   TextButton(
-                                //     onPressed: () {
-                                //       mytel(data, 0);
-                                //     },
-                                //     style: TextButton.styleFrom(
-                                //       padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                                //       backgroundColor: Colors.green.withOpacity(0.1),
-                                //       shape: RoundedRectangleBorder(
-                                //         borderRadius: BorderRadius.circular(8.0),
-                                //       ),
-                                //     ),
-                                //     child: Column(
-                                //       children: [
-                                //         Text(
-                                //           'Credit (+)',
-                                //           style: TextStyle(
-                                //             color: Colors.green,
-                                //             fontWeight: FontWeight.bold,
-                                //             fontSize: 16,
-                                //           ),
-                                //         ),
-                                //         Text(
-                                //           data['credit']?.toString() ?? '0',
-                                //           style: TextStyle(
-                                //             color: Colors.black,
-                                //             fontSize: 14,
-                                //           ),
-                                //         ),
-                                //       ],
-                                //     ),
-                                //   ),
-                                //   TextButton(
-                                //     onPressed: () {
-                                //       mytel(data, 1);
-                                //     },
-                                //     style: TextButton.styleFrom(
-                                //       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                                //       backgroundColor: Colors.red.withOpacity(0.1),
-                                //       shape: RoundedRectangleBorder(
-                                //         borderRadius: BorderRadius.circular(8.0),
-                                //       ),
-                                //     ),
-                                //     child: Column(
-                                //       children: [
-                                //         Text(
-                                //           'Debit (-)',
-                                //           style: TextStyle(
-                                //             color: Colors.red,
-                                //             fontWeight: FontWeight.bold,
-                                //             fontSize: 16,
-                                //           ),
-                                //         ),
-                                //         Text(
-                                //           data['debit']?.toString() ?? '0',
-                                //           style: const TextStyle(
-                                //             color: Colors.black,
-                                //             fontSize: 14,
-                                //           ),
-                                //         ),
-                                //       ],
-                                //     ),
-                                //   ),
-                                //   TextButton(
-                                //     onPressed: () {
-                                //       Navigator.push(
-                                //         context,
-                                //         MaterialPageRoute(
-                                //           builder: (context) => CreditPage(name: data["ClientName"], id: data["AccountId"]),
-                                //         ),
-                                //       );
-                                //     },
-                                //     style: TextButton.styleFrom(
-                                //       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                                //       backgroundColor: Colors.blue.withOpacity(0.1),
-                                //       shape: RoundedRectangleBorder(
-                                //         borderRadius: BorderRadius.circular(8.0),
-                                //       ),
-                                //     ),
-                                //     child: Column(
-                                //       children: [
-                                //         Text(
-                                //           'Balance',
-                                //           style: TextStyle(
-                                //             color: Colors.blue,
-                                //             fontWeight: FontWeight.bold,
-                                //             fontSize: 16,
-                                //           ),
-                                //         ),
-                                //         Text(
-                                //           data['balance']?.toString() ?? '0',
-                                //           style: const TextStyle(
-                                //             color: Colors.black,
-                                //             fontSize: 14,
-                                //           ),
-                                //         ),
-                                //       ],
-                                //     ),
-                                //   ),
-                                // ],
+            final data = namesList[index];
+           return InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CreditPage(
+                        name: data['clientName'], id: data['accountId']),
+                  ),
+                );
+              },
+              child: Card(
+                margin: const EdgeInsets.symmetric(vertical: 8.0),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10.0),
+                ),
+                elevation: 3,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${data['accountId']}. ${data['clientName']}',style: TextStyle(color: Colors.blueGrey,fontSize: 18,fontWeight: FontWeight.w600),),
+                          Row(
+                            children: [
+                              IconButton(
+                                icon:
+                                Icon(Icons.edit, color: Colors.blue),
+                                onPressed: () {},
                               ),
+                              IconButton(
+                                icon:
+                                Icon(Icons.delete, color: Colors.red),
+                                onPressed: () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: Text('Confirm Deletion'),
+                                      content: Text(
+                                          'Are you sure you want to delete this client?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          child: Text('Cancel'),
+                                        ),
+                                        ElevatedButton(
+                                          onPressed: () async {
+                                            int result =
+                                            await AppDatabaseHelper
+                                                .instance
+                                                .deleteClient(data[
+                                            'AccountId']);
+
+                                            if (result > 0) {
+                                              ScaffoldMessenger.of(
+                                                  context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text(
+                                                        'Client Deleted Successfully!')),
+                                              );
+                                              setState(() {
+                                           _loadNames();
+                                              });
+                                              Navigator.pop(context);
+                                            } else {
+                                              ScaffoldMessenger.of(
+                                                  context)
+                                                  .showSnackBar(
+                                                SnackBar(
+                                                    content: Text(
+                                                        'Failed to Delete Client')),
+                                              );
+                                            }
+                                          },
+                                          child: Text('Delete'),
+                                          style: ElevatedButton.styleFrom(
+                                              backgroundColor:
+                                              Colors.red),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+
+                      SizedBox(height: 8),
+
+                      // Text('Code: ${data['ClientCode']}'),
+                      // Text('Email: ${data['EmailId']}'),
+                      // Text('Contact No: ${data['ContactNo']}'),
+                      // Text('Address: ${data['Address']}'),
+                      // Text('Due Balance: ${data['DueBalance']}'),
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment:
+                          MainAxisAlignment.spaceBetween,
+                          children: [
+                            _buildSummaryCard(
+                                'Credit(+)',  data['credit'], Colors.green),
+                            _buildSummaryCard(
+                                'Debit(-)', data['debit'], Colors.red),
+                            _buildSummaryCard(
+                              'Balance',
+                              data['balance'],
+                              Colors.blue,
                             ),
                           ],
+                          // children: [
+                          //   TextButton(
+                          //     onPressed: () {
+                          //       mytel(data, 0);
+                          //     },
+                          //     style: TextButton.styleFrom(
+                          //       padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                          //       backgroundColor: Colors.green.withOpacity(0.1),
+                          //       shape: RoundedRectangleBorder(
+                          //         borderRadius: BorderRadius.circular(8.0),
+                          //       ),
+                          //     ),
+                          //     child: Column(
+                          //       children: [
+                          //         Text(
+                          //           'Credit (+)',
+                          //           style: TextStyle(
+                          //             color: Colors.green,
+                          //             fontWeight: FontWeight.bold,
+                          //             fontSize: 16,
+                          //           ),
+                          //         ),
+                          //         Text(
+                          //           data['credit']?.toString() ?? '0',
+                          //           style: TextStyle(
+                          //             color: Colors.black,
+                          //             fontSize: 14,
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //   ),
+                          //   TextButton(
+                          //     onPressed: () {
+                          //       mytel(data, 1);
+                          //     },
+                          //     style: TextButton.styleFrom(
+                          //       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                          //       backgroundColor: Colors.red.withOpacity(0.1),
+                          //       shape: RoundedRectangleBorder(
+                          //         borderRadius: BorderRadius.circular(8.0),
+                          //       ),
+                          //     ),
+                          //     child: Column(
+                          //       children: [
+                          //         Text(
+                          //           'Debit (-)',
+                          //           style: TextStyle(
+                          //             color: Colors.red,
+                          //             fontWeight: FontWeight.bold,
+                          //             fontSize: 16,
+                          //           ),
+                          //         ),
+                          //         Text(
+                          //           data['debit']?.toString() ?? '0',
+                          //           style: const TextStyle(
+                          //             color: Colors.black,
+                          //             fontSize: 14,
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //   ),
+                          //   TextButton(
+                          //     onPressed: () {
+                          //       Navigator.push(
+                          //         context,
+                          //         MaterialPageRoute(
+                          //           builder: (context) => CreditPage(name: data["ClientName"], id: data["AccountId"]),
+                          //         ),
+                          //       );
+                          //     },
+                          //     style: TextButton.styleFrom(
+                          //       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                          //       backgroundColor: Colors.blue.withOpacity(0.1),
+                          //       shape: RoundedRectangleBorder(
+                          //         borderRadius: BorderRadius.circular(8.0),
+                          //       ),
+                          //     ),
+                          //     child: Column(
+                          //       children: [
+                          //         Text(
+                          //           'Balance',
+                          //           style: TextStyle(
+                          //             color: Colors.blue,
+                          //             fontWeight: FontWeight.bold,
+                          //             fontSize: 16,
+                          //           ),
+                          //         ),
+                          //         Text(
+                          //           data['balance']?.toString() ?? '0',
+                          //           style: const TextStyle(
+                          //             color: Colors.black,
+                          //             fontSize: 14,
+                          //           ),
+                          //         ),
+                          //       ],
+                          //     ),
+                          //   ),
+                          // ],
                         ),
                       ),
-                    ),
-                  );
-                } else {
-                  return SizedBox.shrink();
-                }
-              },
+                    ],
+                  ),
+                ),
+              ),
             );
-          }
-        },
+          },
+        ),
       ),
       floatingActionButton: Material(
         color: Colors.blueGrey.shade600,
         shape: CircleBorder(),
         elevation: 6.0,
         child: InkWell(
-
           onTap: () {
             // Navigate to the new page
             Navigator.push(
