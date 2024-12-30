@@ -22,7 +22,7 @@ class _SearchPageState extends State<SearchPage> {
 
   // Load names from the database
   _loadNames() async {
-    filteredNamesList = await dbHelper.loadNamesWithBalances();
+    filteredNamesList = await dbHelper.loadClientsWithBalances();
     setState(() {});
   }
 

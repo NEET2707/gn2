@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:gn_account_manager/setpinscreen.dart';
+import 'package:gn_account_manager/settings.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'clientlistpage.dart';
-import 'my_drawer_header.dart';
+import 'home.dart';
 import 'database_helper.dart'; // Import the DatabaseHelper class
 import 'creditpage.dart';
 import 'namesearchdelegate.dart';
@@ -22,10 +23,11 @@ class Dashboard extends StatefulWidget {
 
 
 class _DashboardState extends State<Dashboard> {
+  int _selectedIndex = 0;
   bool isToggled = false;
   late Future<List<Map<String, dynamic>>> _clientData;
 
-  var currentPage = DrawerSection.dashboard; // Define currentPage here
+  // var currentPage = DrawerSection.dashboard; // Define currentPage here
   final TextEditingController _nameController = TextEditingController();
   List<Map<String, dynamic>> namesList = []; // List to store both name and id
   List<Map<String, dynamic>> filteredNamesList = []; // List for filtered names
@@ -74,60 +76,41 @@ class _DashboardState extends State<Dashboard> {
     super.dispose();
   }
 
-
-
   @override
   void initState() {
     super.initState();
+    _fetchDashboardData();
     _loadNames();
     _clientData = AppDatabaseHelper().displayDataClient();
   }
 
-  // Load names from the database
-  // Load names along with their credit, debit, and balance
+
+  double totalCredit = 0.0;
+  double totalDebit = 0.0;
+  double totalBalance = 0.0;
+
+
+  Future<void> _fetchDashboardData() async {
+    final data = await AppDatabaseHelper.instance.getTotalCreditDebitBalance();
+    setState(() {
+      totalCredit = data['totalCredit']!;
+      totalDebit = data['totalDebit']!;
+      totalBalance = data['totalBalance']!;
+    });
+  }
+
+
   _loadNames() async {
-    namesList = await dbHelper.loadNamesWithBalances();
+    namesList = await dbHelper.loadClientsWithBalances();
     print("Names List: $namesList"); // Debug print
     filteredNamesList = namesList; // Set initial filtered list as all names
     setState(() {});
   }
 
-  _saveName() async {
-    if (_nameController.text.isNotEmpty) {
-      // Check if the name already exists in the namesList
-      bool isDuplicate = namesList.any((item) => item['name'] == _nameController.text);
-
-      if (isDuplicate) {
-        // Show a message if the name already exists
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('This name already exists!'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      } else {
-        // Insert the name into the database
-        final int result = await dbHelper.insertName(_nameController.text);
-        if (result != -1) {
-          print("Name saved successfully.");
-          _loadNames(); // Reload the names list after inserting
-          _nameController.clear();
-        } else {
-          print("Failed to save the name.");
-        }
-      }
-    } else {
-      print("Name input is empty.");
-    }
-  }
-
-
   void _saveAsPdf() {
     print("Saving as PDF...");
     // Add logic to generate and save the PDF
   }
-
-
 
   Future<String?> getDownloadDirectory() async {
     final directory = await getExternalStorageDirectory();
@@ -147,8 +130,6 @@ class _DashboardState extends State<Dashboard> {
       print('Storage permission is denied');
     }
   }
-
-
 
   Future<void> generatePDF() async {
     try {
@@ -280,19 +261,18 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-
-
-  Future<void> _saveTransaction2(String name, int id) async {
+  Future<void> _saveTransaction2(String accountName, int accountId) async {
     if (_dateController.text.isNotEmpty &&
         _amountController.text.isNotEmpty &&
         _particularController.text.isNotEmpty) {
       final transaction = {
-        'date': _dateController.text,
-        'type': _transactionType,
-        'amount': double.tryParse(_amountController.text) ?? 0.0,
-        'particular': name,
-        'name_id': id
+        'TransactionDate': _dateController.text,
+        'IsCredit': _transactionType == 'credit' ? 1 : 0,
+        'TotalAmount': double.tryParse(_amountController.text) ?? 0.0,
+        'Note': accountName,
+        'AccountId': accountId,
       };
+
       await AppDatabaseHelper().insertTransaction(transaction);
 
       // Clear fields after saving
@@ -303,6 +283,7 @@ class _DashboardState extends State<Dashboard> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Transaction saved successfully!')),
       );
+
       setState(() {});
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -311,14 +292,15 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
-  mytel(nameData,type){
-    return   showDialog(
+
+  mytel(Map<String, dynamic> transactionData, int transactionType) {
+    return showDialog(
       context: context,
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setState) {
-            // Ensure transaction type is always credit
-            _transactionType = type == 0 ? "credit" : "debit";
+            // Ensure transaction type is set correctly
+            _transactionType = transactionType == 0 ? "credit" : "debit";
 
             return Dialog(
               shape: RoundedRectangleBorder(
@@ -329,15 +311,15 @@ class _DashboardState extends State<Dashboard> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Credit Transaction Title
+                    // Transaction Title
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16.0),
                       child: Text(
-                        '${type == 0 ? "Credit" : "Debit"} Transaction', // Title for the dialog
+                        '${transactionType == 0 ? "Credit" : "Debit"} Transaction',
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: type == 0 ? Colors.green : Colors.red, // Dynamic color
+                          color: transactionType == 0 ? Colors.green : Colors.red,
                         ),
                       ),
                     ),
@@ -391,24 +373,29 @@ class _DashboardState extends State<Dashboard> {
                             ),
                           );
                         } else {
-                          await _saveTransaction2(_particularController.text, nameData["id"]);
+                          await _saveTransaction2(
+                            transactionData["AccountId"],
+                            transactionType == 0 ? 1 : 0, // Credit or Debit
+                            // _dateController.text,
+                            // double.tryParse(_amountController.text) ?? 0.0,
+                            // _particularController.text,
+                          );
 
-                          // Update the credit value directly here
-                          setState(() async {
-                            if(type == 0){
-                              double newCredit = double.tryParse(_amountController.text) ?? 0.0;
-                              nameData['credit'] = (nameData['credit'] ?? 0.0) + newCredit;
-                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
-
-                            }else{
-                              await _saveTransaction2(_particularController.text,nameData["id"]);
-                              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),)); // Close the dialog
-                                                      // Refresh the UI
+                          setState(() {
+                            if (transactionType == 0) {
+                              double newCredit =
+                                  double.tryParse(_amountController.text) ?? 0.0;
+                              transactionData["TotalAmount"] =
+                                  (transactionData["TotalAmount"] ?? 0.0) + newCredit;
                             }
                           });
 
-                          // Close the dialog and automatically refresh the UI
-                          Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => Dashboard(),));
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => Dashboard(),
+                            ),
+                          );
                         }
                       },
                       child: Text('Save Transaction'),
@@ -421,7 +408,8 @@ class _DashboardState extends State<Dashboard> {
         );
       },
     );
-}
+  }
+
 
 
   @override
@@ -473,8 +461,8 @@ class _DashboardState extends State<Dashboard> {
         child: SingleChildScrollView(
           child: Column(
             children: [
-              MyHeaderDrawer(),
-              MyDrawerList(),
+              HomeScreen(),
+              // MyDrawerList(),
             ],
           ),
         ),
@@ -502,322 +490,308 @@ class _DashboardState extends State<Dashboard> {
       ),
 
 
-      // Displaying the List of Names
-      body: ListView.builder(
-        itemCount: filteredNamesList.length,
-        itemBuilder: (context, index) {
-          final nameData = filteredNamesList[index];
-          return Padding(
-            padding: const EdgeInsets.all(0.000010),
-            child: Card(
-              margin: EdgeInsets.symmetric(vertical: 10, horizontal: 15),
-              elevation: 5,
-              child: InkWell(
-                onTap: () async {
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'], id: nameData["id"])),
-                  );
-                  _loadNames();
-                },
-                child: Column(
-                  children: [
-                    ListTile(
-                      title: Text(
-                        nameData['name'],
-                        style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit_note, size: 20),
-                            onPressed: () async {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData['name'], id: nameData["id"],)),
-                              );
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete, size: 20),
-                            onPressed: () async {
-                              bool? confirmDelete = await showDialog<bool>(
-                                context: context,
-                                builder: (BuildContext context) {
-                                  return AlertDialog(
-                                    title: Text("Confirm Deletion"),
-                                    content: Text("Are you sure you want to delete this item?"),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop(false); // User cancelled deletion
-                                        },
-                                        child: Text("Cancel"),
-                                      ),
-                                      TextButton(
-                                        onPressed: () {
-                                          Navigator.of(context).pop(true); // User confirmed deletion
-                                        },
-                                        child: Text("Delete"),
-                                      ),
-                                    ],
-                                  );
-                                },
-                              );
-
-                              if (confirmDelete == true) {
-                                int idToDelete = nameData['id'];
-                                await dbHelper.deleteName(idToDelete);
-                                _loadNames();
-                              }
-                            },
-                          ),
-
-                        ],
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-
-
-                          //Credit button pressed
-                          TextButton(
-                            onPressed: () {
-                              print(nameData["name"]);
-                              mytel(nameData,0);
-
-                            },
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                              backgroundColor: Colors.green.withOpacity(0.1), // Optional background color
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Credit (+)',
-                                  style: TextStyle(
-                                    color: Colors.green, // Text color
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                Text(
-                                  nameData['credit']?.toString() ?? '0',
-                                  style: TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          TextButton(
-                            onPressed: () {
-                              mytel(nameData,1);
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                              backgroundColor: Colors.red.withOpacity(0.1), // Optional background color
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Debit (-)', // Label text
-                                  style: TextStyle(
-                                    color: Colors.red, // Text color
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                Text(
-                                  nameData['debit']?.toString() ?? '0', // Value
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => CreditPage(name: nameData["name"], id: nameData["id"],)),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
-                              backgroundColor: Colors.blue.withOpacity(0.1), // Optional background color
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'Balance', // Label text
-                                  style: TextStyle(
-                                    color: Colors.blue, // Text color
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                Text(
-                                  nameData['balance']?.toString() ?? '0', // Value
-                                  style: const TextStyle(
-                                    color: Colors.black,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-
-
-
-    );
-  }
-
-  // Drawer List
-  Widget MyDrawerList() {
-    return Container(
-      padding: EdgeInsets.only(
-        top: 15,
-      ),
-      child: Column(
-        children: [
-          menuItem(1, "Home", Icons.home,
-              currentPage == DrawerSection.home ? true : false),
-          menuItem(2, "Backup", Icons.backup,
-              currentPage == DrawerSection.backup ? true : false),
-          menuItem(3, "Restore", Icons.restore,
-              currentPage == DrawerSection.restore ? true : false),
-          menuItem(4, "Change currency", Icons.settings,
-              currentPage == DrawerSection.changeCurrency ? true : false),
-          menuItem(5, "Change password", Icons.settings,
-              currentPage == DrawerSection.changePassword ? true : false),
-          menuItem(6, "Change security question", Icons.security,
-              currentPage == DrawerSection.securityQuestion ? true : false),
-          menuItem(7, "Setting ", Icons.settings,
-              currentPage == DrawerSection.settings ? true : false),
-          menuItem(8, "FAQs", Icons.question_answer,
-              currentPage == DrawerSection.faqs ? true : false),
-          menuItem(9, "Share the app", Icons.share,
-              currentPage == DrawerSection.shareApp ? true : false),
-          menuItem(10, "Rate the app", Icons.rate_review,
-              currentPage == DrawerSection.rateApp ? true : false),
-          menuItem(11, "Privacy policy", Icons.privacy_tip,
-              currentPage == DrawerSection.privacyPolicy ? true : false),
-          menuItem(12, "More apps", Icons.more,
-              currentPage == DrawerSection.moreApps ? true : false),
-          ListTile(
-            leading: Icon(Icons.pin),
-              title: Text("Enter pin"),
-            trailing: Switch(
-            value: isToggled,
-            onChanged: onToggleSwitch,
-          ),
-          )
-        ],
-      ),
-    );
-  }
-
-  // Drawer menu item
-  Widget menuItem(int id, String title, IconData icon, bool selected) {
-    return Material(
-      color: selected ? Colors.grey[200] : Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          Navigator.pop(context);
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
           setState(() {
-            switch (id) {
-              case 1:
-                currentPage = DrawerSection.home;
-                break;
-              case 2:
-                currentPage = DrawerSection.backup;
-                break;
-              case 3:
-                currentPage = DrawerSection.restore;
-                break;
-              case 4:
-                currentPage = DrawerSection.changeCurrency;
-                break;
-              case 5:
-                currentPage = DrawerSection.changePassword;
-                break;
-              case 6:
-                currentPage = DrawerSection.securityQuestion;
-                break;
-              case 7:
-                currentPage = DrawerSection.settings;
-                break;
-              case 8:
-                currentPage = DrawerSection.faqs;
-                break;
-              case 9:
-                currentPage = DrawerSection.shareApp;
-                break;
-              case 10:
-                currentPage = DrawerSection.rateApp;
-                break;
-              case 11:
-                currentPage = DrawerSection.privacyPolicy;
-                break;
-              case 12:
-                currentPage = DrawerSection.moreApps;
-                break;
-              // case 13:
-              //   currentPage = DrawerSection.enablepin;
-              //   Navigator.push(
-              //     context,
-              //     MaterialPageRoute(builder: (context) => SetPinScreen()), // Navigate to Set PIN screen
-              //   );
-              //   break;
+            _selectedIndex = index;
 
+            // Navigate to SettingsPage when "Settings" is selected
+            if (index == 0) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => HomeScreen()),
+              );
+            }
+            if (index == 1) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => Dashboard()),
+              );
+            }
+            if (index == 2) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => SettingsPage()),
+              );
             }
           });
         },
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.list),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+      ),
+
+
+
+      body: FutureBuilder<List<Map<String, dynamic>>>(
+        future: _clientData,  // Fetch client data from your database
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          } else {
+            // Combine both datasets (client data and other data if needed)
+            var combinedData = [
+              ...(snapshot.data ?? []).map((item) => {'type': 'client', ...item}).toList(),
+            ];
+
+            if (combinedData.isEmpty) {
+              return Center(child: Text('No data available.'));
+            }
+
+            return ListView.builder(
+              itemCount: combinedData.length,
+              itemBuilder: (context, index) {
+                final data = combinedData[index];
+
+                if (data['type'] == 'client') {
+                  return InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CreditPage(name: data['ClientName'], id: data['AccountId']),
+                        ),
+                      );
+                    },
+                    child: Card(
+                      margin: const EdgeInsets.symmetric(vertical: 8.0),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10.0),
+                      ),
+                      elevation: 3,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Account ID: ${data['AccountId']}',
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: Icon(Icons.edit, color: Colors.blue),
+                                      onPressed: () {},
+                                    ),
+                                    IconButton(
+                                      icon: Icon(Icons.delete, color: Colors.red),
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (context) => AlertDialog(
+                                            title: Text('Confirm Deletion'),
+                                            content: Text('Are you sure you want to delete this client?'),
+                                            actions: [
+                                              TextButton(
+                                                onPressed: () => Navigator.pop(context),
+                                                child: Text('Cancel'),
+                                              ),
+                                              ElevatedButton(
+                                                onPressed: () async {
+                                                  int result = await AppDatabaseHelper.instance.deleteClient(data['AccountId']);
+
+                                                  if (result > 0) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Client Deleted Successfully!')),
+                                                    );
+                                                    setState(() {
+                                                      _clientData = AppDatabaseHelper().displayDataClient();
+                                                    });
+                                                    Navigator.pop(context);
+                                                  } else {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(content: Text('Failed to Delete Client')),
+                                                    );
+                                                  }
+                                                },
+                                                child: Text('Delete'),
+                                                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Text('Name: ${data['ClientName']}'),
+                            Text('Code: ${data['ClientCode']}'),
+                            Text('Email: ${data['EmailId']}'),
+                            Text('Contact No: ${data['ContactNo']}'),
+                            Text('Address: ${data['Address']}'),
+                            Text('Due Balance: ${data['DueBalance']}'),
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  _buildSummaryCard('Credit(+)', totalCredit, Colors.green),
+                                  _buildSummaryCard('Debit(-)', totalDebit, Colors.red),
+                                  _buildSummaryCard('Balance', totalBalance, Colors.blue),
+                                ],
+                                // children: [
+                                //   TextButton(
+                                //     onPressed: () {
+                                //       mytel(data, 0);
+                                //     },
+                                //     style: TextButton.styleFrom(
+                                //       padding: EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                                //       backgroundColor: Colors.green.withOpacity(0.1),
+                                //       shape: RoundedRectangleBorder(
+                                //         borderRadius: BorderRadius.circular(8.0),
+                                //       ),
+                                //     ),
+                                //     child: Column(
+                                //       children: [
+                                //         Text(
+                                //           'Credit (+)',
+                                //           style: TextStyle(
+                                //             color: Colors.green,
+                                //             fontWeight: FontWeight.bold,
+                                //             fontSize: 16,
+                                //           ),
+                                //         ),
+                                //         Text(
+                                //           data['credit']?.toString() ?? '0',
+                                //           style: TextStyle(
+                                //             color: Colors.black,
+                                //             fontSize: 14,
+                                //           ),
+                                //         ),
+                                //       ],
+                                //     ),
+                                //   ),
+                                //   TextButton(
+                                //     onPressed: () {
+                                //       mytel(data, 1);
+                                //     },
+                                //     style: TextButton.styleFrom(
+                                //       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                                //       backgroundColor: Colors.red.withOpacity(0.1),
+                                //       shape: RoundedRectangleBorder(
+                                //         borderRadius: BorderRadius.circular(8.0),
+                                //       ),
+                                //     ),
+                                //     child: Column(
+                                //       children: [
+                                //         Text(
+                                //           'Debit (-)',
+                                //           style: TextStyle(
+                                //             color: Colors.red,
+                                //             fontWeight: FontWeight.bold,
+                                //             fontSize: 16,
+                                //           ),
+                                //         ),
+                                //         Text(
+                                //           data['debit']?.toString() ?? '0',
+                                //           style: const TextStyle(
+                                //             color: Colors.black,
+                                //             fontSize: 14,
+                                //           ),
+                                //         ),
+                                //       ],
+                                //     ),
+                                //   ),
+                                //   TextButton(
+                                //     onPressed: () {
+                                //       Navigator.push(
+                                //         context,
+                                //         MaterialPageRoute(
+                                //           builder: (context) => CreditPage(name: data["ClientName"], id: data["AccountId"]),
+                                //         ),
+                                //       );
+                                //     },
+                                //     style: TextButton.styleFrom(
+                                //       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+                                //       backgroundColor: Colors.blue.withOpacity(0.1),
+                                //       shape: RoundedRectangleBorder(
+                                //         borderRadius: BorderRadius.circular(8.0),
+                                //       ),
+                                //     ),
+                                //     child: Column(
+                                //       children: [
+                                //         Text(
+                                //           'Balance',
+                                //           style: TextStyle(
+                                //             color: Colors.blue,
+                                //             fontWeight: FontWeight.bold,
+                                //             fontSize: 16,
+                                //           ),
+                                //         ),
+                                //         Text(
+                                //           data['balance']?.toString() ?? '0',
+                                //           style: const TextStyle(
+                                //             color: Colors.black,
+                                //             fontSize: 14,
+                                //           ),
+                                //         ),
+                                //       ],
+                                //     ),
+                                //   ),
+                                // ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                } else {
+                  return SizedBox.shrink();
+                }
+              },
+            );
+          }
+        },
+      ),
+
+
+
+    );
+  }
+
+  Widget _buildSummaryCard(String label, double value, Color color) {
+    return Expanded(
+      child: Card(
+        color: color.withOpacity(0.8),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         child: Padding(
-          padding: EdgeInsets.all(15),
-          child: Row(
+          padding: const EdgeInsets.all(15.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                icon,
-                size: 20,
-                color: Colors.black,
-              ),
-              SizedBox(width: 15),
               Text(
-                title,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: 16,
+                label,
+                style: const TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '₹ ${value.toStringAsFixed(0)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],
@@ -828,21 +802,146 @@ class _DashboardState extends State<Dashboard> {
   }
 }
 
-// Enum for Drawer Section
-enum DrawerSection {
-  dashboard, // Add this line
-  home,
-  backup,
-  restore,
-  changeCurrency,
-  changePassword,
-  securityQuestion,
-  settings,
-  faqs,
-  shareApp,
-  rateApp,
-  privacyPolicy,
-  moreApps,
-  logOut,
-  enablepin
-}
+  // Drawer List
+//   Widget MyDrawerList() {
+//     return Container(
+//       padding: EdgeInsets.only(
+//         top: 15,
+//       ),
+//       child: Column(
+//         children: [
+//           menuItem(1, "Home", Icons.home,
+//               currentPage == DrawerSection.home ? true : false),
+//           menuItem(2, "Backup", Icons.backup,
+//               currentPage == DrawerSection.backup ? true : false),
+//           menuItem(3, "Restore", Icons.restore,
+//               currentPage == DrawerSection.restore ? true : false),
+//           menuItem(4, "Change currency", Icons.settings,
+//               currentPage == DrawerSection.changeCurrency ? true : false),
+//           menuItem(5, "Change password", Icons.settings,
+//               currentPage == DrawerSection.changePassword ? true : false),
+//           menuItem(6, "Change security question", Icons.security,
+//               currentPage == DrawerSection.securityQuestion ? true : false),
+//           menuItem(7, "Setting ", Icons.settings,
+//               currentPage == DrawerSection.settings ? true : false),
+//           menuItem(8, "FAQs", Icons.question_answer,
+//               currentPage == DrawerSection.faqs ? true : false),
+//           menuItem(9, "Share the app", Icons.share,
+//               currentPage == DrawerSection.shareApp ? true : false),
+//           menuItem(10, "Rate the app", Icons.rate_review,
+//               currentPage == DrawerSection.rateApp ? true : false),
+//           menuItem(11, "Privacy policy", Icons.privacy_tip,
+//               currentPage == DrawerSection.privacyPolicy ? true : false),
+//           menuItem(12, "More apps", Icons.more,
+//               currentPage == DrawerSection.moreApps ? true : false),
+//           ListTile(
+//             leading: Icon(Icons.pin),
+//               title: Text("Enter pin"),
+//             trailing: Switch(
+//             value: isToggled,
+//             onChanged: onToggleSwitch,
+//           ),
+//           )
+//         ],
+//       ),
+//     );
+//   }
+//
+//   // Drawer menu item
+//   Widget menuItem(int id, String title, IconData icon, bool selected) {
+//     return Material(
+//       color: selected ? Colors.grey[200] : Colors.transparent,
+//       child: InkWell(
+//         onTap: () {
+//           Navigator.pop(context);
+//           setState(() {
+//             switch (id) {
+//               case 1:
+//                 currentPage = DrawerSection.home;
+//                 break;
+//               case 2:
+//                 currentPage = DrawerSection.backup;
+//                 break;
+//               case 3:
+//                 currentPage = DrawerSection.restore;
+//                 break;
+//               case 4:
+//                 currentPage = DrawerSection.changeCurrency;
+//                 break;
+//               case 5:
+//                 currentPage = DrawerSection.changePassword;
+//                 break;
+//               case 6:
+//                 currentPage = DrawerSection.securityQuestion;
+//                 break;
+//               case 7:
+//                 currentPage = DrawerSection.settings;
+//                 break;
+//               case 8:
+//                 currentPage = DrawerSection.faqs;
+//                 break;
+//               case 9:
+//                 currentPage = DrawerSection.shareApp;
+//                 break;
+//               case 10:
+//                 currentPage = DrawerSection.rateApp;
+//                 break;
+//               case 11:
+//                 currentPage = DrawerSection.privacyPolicy;
+//                 break;
+//               case 12:
+//                 currentPage = DrawerSection.moreApps;
+//                 break;
+//               // case 13:
+//               //   currentPage = DrawerSection.enablepin;
+//               //   Navigator.push(
+//               //     context,
+//               //     MaterialPageRoute(builder: (context) => SetPinScreen()), // Navigate to Set PIN screen
+//               //   );
+//               //   break;
+//
+//             }
+//           });
+//         },
+//         child: Padding(
+//           padding: EdgeInsets.all(15),
+//           child: Row(
+//             children: [
+//               Icon(
+//                 icon,
+//                 size: 20,
+//                 color: Colors.black,
+//               ),
+//               SizedBox(width: 15),
+//               Text(
+//                 title,
+//                 style: TextStyle(
+//                   color: Colors.black,
+//                   fontSize: 16,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
+//
+// // Enum for Drawer Section
+// enum DrawerSection {
+//   dashboard, // Add this line
+//   home,
+//   backup,
+//   restore,
+//   changeCurrency,
+//   changePassword,
+//   securityQuestion,
+//   settings,
+//   faqs,
+//   shareApp,
+//   rateApp,
+//   privacyPolicy,
+//   moreApps,
+//   logOut,
+//   enablepin

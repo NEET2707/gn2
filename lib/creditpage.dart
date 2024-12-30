@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:gn_account_manager/transactionpage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:pdf/pdf.dart';
@@ -18,10 +19,12 @@ class CreditPage extends StatefulWidget {
 }
 
 class _CreditPageState extends State<CreditPage> {
+  late Future<List<Map<String, dynamic>>> _transactionSummary;
+  late Future<List<Map<String, dynamic>>> transactions;
 
   DateTime startDate = DateTime(2023, 1, 1);
   DateTime endDate = DateTime.now();
-  
+
   double totalbal = 0.0;
   String? _transactionType = 'credit';
   TextEditingController _dateController = TextEditingController();
@@ -44,31 +47,30 @@ class _CreditPageState extends State<CreditPage> {
 
 
 
-  double _calculateTotalCredit(List<Map<String, dynamic>> transactions) {
+  double calculateTotalCredit(List<Map<String, dynamic>> transactions) {
     double totalCredit = 0.0;
     for (var tx in transactions) {
-      if (tx['type'] == 'credit') {
-        totalCredit += tx['amount'] ?? 0.0;
+      if (tx["IsCredit"] == 1) { // Assuming 1 indicates credit
+        totalCredit += tx["TotalAmount"] ?? 0.0;
       }
     }
     return totalCredit;
   }
 
-  // Calculate total debit
-  double _calculateTotalDebit(List<Map<String, dynamic>> transactions) {
+  double calculateTotalDebit(List<Map<String, dynamic>> transactions) {
     double totalDebit = 0.0;
     for (var tx in transactions) {
-      if (tx['type'] == 'debit') {
-        totalDebit += tx['amount'] ?? 0.0;
+      if (tx["IsCredit"] == 0) { // Assuming 0 indicates debit
+        totalDebit += tx["TotalAmount"] ?? 0.0;
       }
     }
     return totalDebit;
   }
 
-  // Calculate balance
-  double _calculateBalance(double totalCredit, double totalDebit) {
+  double calculateBalance(double totalCredit, double totalDebit) {
     return totalCredit - totalDebit;
   }
+
 
   // Select Date
   Future<void> _selectDate(BuildContext context) async {
@@ -149,10 +151,11 @@ class _CreditPageState extends State<CreditPage> {
   }
 
   Future<List<Map<String, dynamic>>> _fetchTransactions() async {
-    return await AppDatabaseHelper().getTransactionsByName(widget.id);
+    return await AppDatabaseHelper().getTransactionsByAccountId(widget.id);
   }
 
   List<Map<String, dynamic>> _filteredTransactions = [];
+
   void _showSearchDialog() {
     showDialog(
       context: context,
@@ -232,7 +235,8 @@ class _CreditPageState extends State<CreditPage> {
     );
   }
 
-  void searchDateVise() async {
+  void searchDateVise() async
+  {
     if (_startDateController.text.isNotEmpty &&
         _endDateController.text.isNotEmpty) {
       // Fetch transactions
@@ -314,7 +318,7 @@ class _CreditPageState extends State<CreditPage> {
       // Use the filtered transactions for the PDF
       List<Map<String, dynamic>> transactions = _filteredTransactions.isNotEmpty
           ? _filteredTransactions
-          : await AppDatabaseHelper().getTransactionsByName(widget.id);
+          : await AppDatabaseHelper().getTransactionsByAccountId(widget.id);
 
       print(transactions); // Check the data in the console
 
@@ -388,10 +392,10 @@ class _CreditPageState extends State<CreditPage> {
                 ),
                 pw.SizedBox(height: 20),
                 // Display totals
-                pw.Text('Total Credit: ${_calculateTotalCredit(transactions)}', style: pw.TextStyle(fontSize: 18)),
-                pw.Text('Total Debit: ${_calculateTotalDebit(transactions)}', style: pw.TextStyle(fontSize: 18)),
+                pw.Text('Total Credit: ${calculateTotalCredit(transactions)}', style: pw.TextStyle(fontSize: 18)),
+                pw.Text('Total Debit: ${calculateTotalDebit(transactions)}', style: pw.TextStyle(fontSize: 18)),
                 pw.Text(
-                  'Total Balance: ${_calculateBalance(_calculateTotalCredit(transactions), _calculateTotalDebit(transactions))}',
+                  'Total Balance: ${calculateBalance(calculateTotalCredit(transactions), calculateTotalDebit(transactions))}',
                   style: pw.TextStyle(fontSize: 18),
                 ),
               ],
@@ -437,9 +441,35 @@ class _CreditPageState extends State<CreditPage> {
     }
   }
 
+  @override
+  void initState() {
+    super.initState();
+    transactions = AppDatabaseHelper.instance.getTransactionSummary();
+    // fetchAndCalculateTransactions();
+  }
+
+
+
+
+  // Future<void> displayTransactionSummaryOnCreditPage() async {
+  //   final dbHelper = AppDatabaseHelper.instance;
+  //   List<Map<String, dynamic>> transactions = await dbHelper.getAllTransactions(); // Use getAllTransactions for a broader fetch
+  //
+  //   if (transactions.isEmpty) {
+  //     print("No transactions found.");
+  //   }
+  //
+  //   for (var transaction in transactions) {
+  //     print("Transaction ID: ${transaction[KEY_TRANSACTION_ID]}");
+  //     print("Transaction Date: ${transaction[KEY_TRANSACTION_DATE]}");
+  //     print("Credit: ${transaction[KEY_IS_CREDIT]}");
+  //     print("Total Amount: ${transaction[KEY_TOTAL_AMOUNT]}");
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
+    print(widget.id);
     return Scaffold(
       appBar: AppBar(
         iconTheme: IconThemeData(color: Color(0xFFECECEC)),
@@ -453,157 +483,162 @@ class _CreditPageState extends State<CreditPage> {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) {
-                  return StatefulBuilder(
-                    builder: (context, setState) {
-                      return Dialog(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16.0), // Rounded corners
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Add Transaction Title
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 20.0),
-                                child: Center(
-                                  child: Text(
-                                    'Add Transaction',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.blueAccent, // Color for title
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                              // Date Input
-                              GestureDetector(
-                                onTap: () => _selectDate(context),
-                                child: AbsorbPointer( // Prevent keyboard from appearing
-                                  child: TextField(
-                                    controller: _dateController,
-                                    readOnly: true,
-                                    decoration: InputDecoration(
-                                      labelText: 'Transaction Date',
-                                      labelStyle: TextStyle(color: Colors.blueGrey),
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(12.0),
-                                      ),
-                                      suffixIcon: Icon(Icons.calendar_today, color: Colors.blue),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-
-                              // Transaction Type (Radio buttons)
-                              Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 8.0),
-                                child: Row(
-                                  children: [
-                                    Radio<String>(
-                                      value: 'credit',
-                                      groupValue: _transactionType,
-                                      onChanged: (String? value) {
-                                        setState(() {
-                                          _transactionType = value!;
-                                        });
-                                      },
-                                    ),
-                                    Text('Credit', style: TextStyle(fontSize: 16)),
-                                    SizedBox(width: 20),
-                                    Radio<String>(
-                                      value: 'debit',
-                                      groupValue: _transactionType,
-                                      onChanged: (String? value) {
-                                        setState(() {
-                                          _transactionType = value!;
-                                        });
-                                      },
-                                    ),
-                                    Text('Debit', style: TextStyle(fontSize: 16)),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 16),
-
-                              // Amount Input
-                              TextField(
-                                controller: _amountController,
-                                keyboardType: TextInputType.number,
-                                decoration: InputDecoration(
-                                  labelText: 'Amount',
-                                  labelStyle: TextStyle(color: Colors.blueGrey),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-
-                              // Particular Input
-                              TextField(
-                                controller: _particularController,
-                                decoration: InputDecoration(
-                                  labelText: 'Particular',
-                                  labelStyle: TextStyle(color: Colors.blueGrey),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12.0),
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 24),
-
-                              // Save Button
-                              Center(
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    // Form Validation
-                                    if (_dateController.text.isEmpty ||
-                                        _transactionType == null ||
-                                        _amountController.text.isEmpty ||
-                                        _particularController.text.isEmpty) {
-                                      // Show error message if any field is empty
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('Please fill in all fields.'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    } else {
-                                      // Proceed to save the transaction
-                                      await _saveTransaction(); // Call the save method
-                                      Navigator.pop(context); // Close the dialog
-                                      setState(() {}); // Refresh the UI
-                                    }
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                    padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                  ),
-                                  child: Text(
-                                    'Save Transaction',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => TransactionPage(name: widget.name,id: widget.id,)),
               );
+
+              // showDialog(
+                // context: context,
+                // builder: (context) {
+                //   return StatefulBuilder(
+                //     builder: (context, setState) {
+                //       return Dialog(
+                //         shape: RoundedRectangleBorder(
+                //           borderRadius: BorderRadius.circular(16.0), // Rounded corners
+                //         ),
+                //         child: Padding(
+                //           padding: const EdgeInsets.all(20.0),
+                //           child: Column(
+                //             mainAxisSize: MainAxisSize.min,
+                //             crossAxisAlignment: CrossAxisAlignment.start,
+                //             children: [
+                //               // Add Transaction Title
+                //               Padding(
+                //                 padding: const EdgeInsets.only(bottom: 20.0),
+                //                 child: Center(
+                //                   child: Text(
+                //                     'Add Transaction',
+                //                     style: TextStyle(
+                //                       fontSize: 24,
+                //                       fontWeight: FontWeight.bold,
+                //                       color: Colors.blueAccent, // Color for title
+                //                     ),
+                //                   ),
+                //                 ),
+                //               ),
+                //
+                //               // Date Input
+                //               GestureDetector(
+                //                 onTap: () => _selectDate(context),
+                //                 child: AbsorbPointer( // Prevent keyboard from appearing
+                //                   child: TextField(
+                //                     controller: _dateController,
+                //                     readOnly: true,
+                //                     decoration: InputDecoration(
+                //                       labelText: 'Transaction Date',
+                //                       labelStyle: TextStyle(color: Colors.blueGrey),
+                //                       border: OutlineInputBorder(
+                //                         borderRadius: BorderRadius.circular(12.0),
+                //                       ),
+                //                       suffixIcon: Icon(Icons.calendar_today, color: Colors.blue),
+                //                     ),
+                //                   ),
+                //                 ),
+                //               ),
+                //               SizedBox(height: 16),
+                //
+                //               // Transaction Type (Radio buttons)
+                //               Padding(
+                //                 padding: const EdgeInsets.symmetric(vertical: 8.0),
+                //                 child: Row(
+                //                   children: [
+                //                     Radio<String>(
+                //                       value: 'credit',
+                //                       groupValue: _transactionType,
+                //                       onChanged: (String? value) {
+                //                         setState(() {
+                //                           _transactionType = value!;
+                //                         });
+                //                       },
+                //                     ),
+                //                     Text('Credit', style: TextStyle(fontSize: 16)),
+                //                     SizedBox(width: 20),
+                //                     Radio<String>(
+                //                       value: 'debit',
+                //                       groupValue: _transactionType,
+                //                       onChanged: (String? value) {
+                //                         setState(() {
+                //                           _transactionType = value!;
+                //                         });
+                //                       },
+                //                     ),
+                //                     Text('Debit', style: TextStyle(fontSize: 16)),
+                //                   ],
+                //                 ),
+                //               ),
+                //               SizedBox(height: 16),
+                //
+                //               // Amount Input
+                //               TextField(
+                //                 controller: _amountController,
+                //                 keyboardType: TextInputType.number,
+                //                 decoration: InputDecoration(
+                //                   labelText: 'Amount',
+                //                   labelStyle: TextStyle(color: Colors.blueGrey),
+                //                   border: OutlineInputBorder(
+                //                     borderRadius: BorderRadius.circular(12.0),
+                //                   ),
+                //                 ),
+                //               ),
+                //               SizedBox(height: 16),
+                //
+                //               // Particular Input
+                //               TextField(
+                //                 controller: _particularController,
+                //                 decoration: InputDecoration(
+                //                   labelText: 'Particular',
+                //                   labelStyle: TextStyle(color: Colors.blueGrey),
+                //                   border: OutlineInputBorder(
+                //                     borderRadius: BorderRadius.circular(12.0),
+                //                   ),
+                //                 ),
+                //               ),
+                //               SizedBox(height: 24),
+                //
+                //               // Save Button
+                //               Center(
+                //                 child: ElevatedButton(
+                //                   onPressed: () async {
+                //                     // Form Validation
+                //                     if (_dateController.text.isEmpty ||
+                //                         _transactionType == null ||
+                //                         _amountController.text.isEmpty ||
+                //                         _particularController.text.isEmpty) {
+                //                       // Show error message if any field is empty
+                //                       ScaffoldMessenger.of(context).showSnackBar(
+                //                         SnackBar(
+                //                           content: Text('Please fill in all fields.'),
+                //                           backgroundColor: Colors.red,
+                //                         ),
+                //                       );
+                //                     } else {
+                //                       // Proceed to save the transaction
+                //                       await _saveTransaction(); // Call the save method
+                //                       Navigator.pop(context); // Close the dialog
+                //                       setState(() {}); // Refresh the UI
+                //                     }
+                //                   },
+                //                   style: ElevatedButton.styleFrom(
+                //                     padding: EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                //                     shape: RoundedRectangleBorder(
+                //                       borderRadius: BorderRadius.circular(8),
+                //                     ),
+                //                   ),
+                //                   child: Text(
+                //                     'Save Transaction',
+                //                     style: TextStyle(fontSize: 16),
+                //                   ),
+                //                 ),
+                //               ),
+                //             ],
+                //           ),
+                //         ),
+                //       );
+                //     },
+                //   );
+                // },
+              // );
             },
           ),
 
@@ -662,7 +697,7 @@ class _CreditPageState extends State<CreditPage> {
               ),
             ),
           ),
-          
+
           // Transaction List
           Expanded(
             child: FutureBuilder<List<Map<String, dynamic>>>(
@@ -680,9 +715,9 @@ class _CreditPageState extends State<CreditPage> {
                       ? snapshot.data!
                       : _filteredTransactions;
 
-                  double totalCredit = _calculateTotalCredit(transactions);
-                  double totalDebit = _calculateTotalDebit(transactions);
-                  double balance = _calculateBalance(totalCredit, totalDebit);
+                  double totalCredit = calculateTotalCredit(transactions);
+                  double totalDebit = calculateTotalDebit(transactions);
+                  double balance = calculateBalance(totalCredit, totalDebit);
 
                   return Column(
                     children: [
@@ -696,23 +731,26 @@ class _CreditPageState extends State<CreditPage> {
                             itemBuilder: (context, index) {
                               var transaction = transactions[index];
                               return Container(
-                                color: index % 2 == 0
-                                    ? Colors.white
-                                    : Colors.grey[200],
+                                color: index % 2 == 0 ? Colors.white : Colors.grey[200],
                                 child: Padding(
                                   padding: const EdgeInsets.all(8.0),
                                   child: Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-
-                                      Expanded(child: Text('${index+1}'),),
-                                      Expanded(child: Text('${transaction['date']}'),flex: 2,),
-                                      SizedBox(width: 10,),
-                                      Expanded(child: Text('${transaction['particular']}'), flex: 2,),
+                                      Expanded(child: Text('${index + 1}')),
+                                      Expanded(
+                                        child: Text('${transaction['TransactionDate']}'),
+                                        flex: 2,
+                                      ),
+                                      SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text('${transaction['Note']}'),
+                                        flex: 2,
+                                      ),
                                       Expanded(
                                         child: Text(
-                                          transaction['type'] == 'credit'
-                                              ? '₹${transaction['amount']}'
+                                          transaction['IsCredit'] == 1
+                                              ? '₹${transaction['TotalAmount']}'
                                               : '0.00',
                                           style: TextStyle(color: Colors.green),
                                         ),
@@ -721,13 +759,12 @@ class _CreditPageState extends State<CreditPage> {
                                       Expanded(
                                         flex: 1,
                                         child: Text(
-                                          transaction['type'] == 'debit'
-                                              ? '₹${transaction['amount']}'
+                                          transaction['IsCredit'] == 0
+                                              ? '₹${transaction['TotalAmount']}'
                                               : '0.00',
                                           style: TextStyle(color: Colors.red),
                                         ),
                                       ),
-
                                     ],
                                   ),
                                 ),
@@ -742,21 +779,24 @@ class _CreditPageState extends State<CreditPage> {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            // Display totals
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Column(
                                 children: [
-                                  Text('Total Credit',
-                                      style: TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                  Text('${totalCredit.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                          color: Colors.green,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
+                                  Text(
+                                    'Total Credit',
+                                    style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  Text(
+                                    '${totalCredit.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                        color: Colors.green,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
                                 ],
                               ),
                             ),
@@ -764,16 +804,20 @@ class _CreditPageState extends State<CreditPage> {
                               padding: const EdgeInsets.all(8.0),
                               child: Column(
                                 children: [
-                                  Text('Total Debit',
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                  Text('${totalDebit.toStringAsFixed(2)}',
-                                      style: TextStyle(
-                                          color: Colors.red,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
+                                  Text(
+                                    'Total Debit',
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
+                                  Text(
+                                    '${totalDebit.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16),
+                                  ),
                                 ],
                               ),
                             ),
@@ -783,16 +827,20 @@ class _CreditPageState extends State<CreditPage> {
                                 padding: const EdgeInsets.all(8.0),
                                 child: Column(
                                   children: [
-                                    Text('Total Balance',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16)),
-                                    Text('${balance.toStringAsFixed(2)}',
-                                        style: TextStyle(
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 16)),
+                                    Text(
+                                      'Total Balance',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                    ),
+                                    Text(
+                                      '${balance.toStringAsFixed(2)}',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 16),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -802,6 +850,7 @@ class _CreditPageState extends State<CreditPage> {
                       ),
                     ],
                   );
+
                 }
               },
             ),
@@ -814,3 +863,4 @@ class _CreditPageState extends State<CreditPage> {
   }
 
 }
+
